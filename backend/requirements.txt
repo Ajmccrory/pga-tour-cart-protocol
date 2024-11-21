@@ -1,6 +1,11 @@
-Flask==2.3.3
-Flask-SQLAlchemy==3.1.1
-Flask-Cors==4.0.0
-pymysql==1.1.0
-python-dotenv==1.0.0
-Werkzeug==2.3.7 
+# Cart Management System - Python Dependencies
+# Author: AJ McCrory
+# Created: 2024
+# Description: Required Python packages for the backend service
+
+Flask==2.0.1
+Flask-SQLAlchemy==2.5.1
+Flask-Cors==3.0.10
+PyMySQL==1.0.2
+python-dotenv==0.19.0
+Werkzeug==2.0.1 

@@ -2,20 +2,14 @@
 node_modules/
 __pycache__/
 *.pyc
-
-# Environment files
 .env
-.env.local
-.env.development
-.env.test
-.env.production
 
-# Build files
+# Build
 build/
 dist/
 *.egg-info/
 
-# IDE files
+# IDE
 .vscode/
 .idea/
 *.swp
@@ -24,6 +18,10 @@ dist/
 # Logs
 *.log
 npm-debug.log*
+
+# Docker
+.docker/
+docker-compose.override.yml
 
 # Database
 *.sqlite 

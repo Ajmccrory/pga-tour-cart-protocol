@@ -1,3 +1,11 @@
+"""
+Cart Management System - Application Entry Point
+Author: AJ McCrory
+Created: 2024
+Description: Initializes and runs the Flask application server
+             Creates database tables if they don't exist
+"""
+
 from app import create_app, db
 
 app = create_app()

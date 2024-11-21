@@ -1,3 +1,13 @@
+/**
+ * Cart Management System - Type Definitions
+ * @author AJ McCrory
+ * @created 2024
+ * @description TypeScript type definitions for the application
+ */
+
+/**
+ * Cart entity interface
+ */
 export interface Cart {
     id: number;
     cart_number: string;
@@ -8,13 +18,23 @@ export interface Cart {
     assigned_to_id: number | null;
 }
 
-export type Role = 'admin' | 'player' | 'volunteer';
-
+/**
+ * Person entity interface
+ */
 export interface Person {
-    id?: string;
+    id: number;
     name: string;
-    role: Role;
+    role: 'admin' | 'volunteer';
     phone: string;
     email: string;
     active_cart: Cart[];
+}
+
+/**
+ * API Error response interface
+ */
+export interface APIResponse<T> {
+    data?: T;
+    error?: string;
+    status: number;
 } 

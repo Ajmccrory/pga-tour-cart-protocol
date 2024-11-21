@@ -1,3 +1,10 @@
+/**
+ * Cart Management System - Cart List Component
+ * @author AJ McCrory
+ * @created 2024
+ * @description Displays and manages a list of carts with CRUD operations
+ */
+
 import React, { useState } from 'react';
 import {
   List,
@@ -6,110 +13,47 @@ import {
   IconButton,
   Dialog,
   Typography,
-  Button,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
 } from '@mui/material';
 import { Edit, Delete, Timer } from '@mui/icons-material';
 import { Cart } from '../types/types';
 import CartForm from './CartForm';
+import TimeUpdateDialog from './TimeUpdateDialog';
+import { displayErrorMessage } from '../utils/errorHandling';
+import { api } from '../utils/api';
 
 interface CartListProps {
   carts: Cart[];
   onUpdate: () => void;
+  onError: (message: string) => void;
 }
 
-interface TimeUpdateDialogProps {
-  open: boolean;
-  cart: Cart | null;
-  onClose: () => void;
-  onSubmit: (checkoutTime: string, returnTime: string) => void;
-}
-
-const TimeUpdateDialog: React.FC<TimeUpdateDialogProps> = ({
-  open,
-  cart,
-  onClose,
-  onSubmit,
-}) => {
-  const [checkoutTime, setCheckoutTime] = useState(cart?.checkout_time || '');
-  const [returnTime, setReturnTime] = useState(cart?.return_by_time || '');
-
-  const handleSubmit = () => {
-    onSubmit(checkoutTime, returnTime);
-    onClose();
-  };
-
-  return (
-    <Dialog open={open} onClose={onClose}>
-      <DialogTitle>Update Cart Times</DialogTitle>
-      <DialogContent>
-        <TextField
-          fullWidth
-          type="datetime-local"
-          label="Checkout Time"
-          value={checkoutTime}
-          onChange={(e) => setCheckoutTime(e.target.value)}
-          margin="normal"
-          InputLabelProps={{ shrink: true }}
-        />
-        <TextField
-          fullWidth
-          type="datetime-local"
-          label="Return By"
-          value={returnTime}
-          onChange={(e) => setReturnTime(e.target.value)}
-          margin="normal"
-          InputLabelProps={{ shrink: true }}
-        />
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" color="primary">
-          Update Times
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
-
-const CartList: React.FC<CartListProps> = ({ carts, onUpdate }) => {
+/**
+ * CartList component for displaying and managing carts
+ */
+const CartList: React.FC<CartListProps> = ({ carts, onUpdate, onError }) => {
   const [editCart, setEditCart] = useState<Cart | null>(null);
   const [timeUpdateCart, setTimeUpdateCart] = useState<Cart | null>(null);
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this cart?')) {
-      await fetch(`http://localhost:5000/carts/${id}`, {
-        method: 'DELETE',
-      });
-      onUpdate();
-    }
-  };
-
-  const handleTimeUpdate = async (checkoutTime: string, returnTime: string) => {
-    if (!timeUpdateCart) return;
-
-    await fetch(`http://localhost:5000/carts/${timeUpdateCart.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...timeUpdateCart,
-        checkout_time: checkoutTime,
-        return_by_time: returnTime,
-        status: 'in-use',
-      }),
-    });
-    onUpdate();
-    setTimeUpdateCart(null);
-  };
-
-  const formatDateTime = (dateTime: string | null) => {
+  /**
+   * Formats date time for display
+   */
+  const formatDateTime = (dateTime: string | null): string => {
     if (!dateTime) return 'Not set';
     return new Date(dateTime).toLocaleString();
+  };
+
+  /**
+   * Handles cart deletion
+   */
+  const handleDelete = async (id: number) => {
+    try {
+      if (window.confirm('Are you sure you want to delete this cart?')) {
+        await api.deleteCart(id);
+        onUpdate();
+      }
+    } catch (error) {
+      onError(displayErrorMessage(error));
+    }
   };
 
   return (
@@ -149,6 +93,7 @@ const CartList: React.FC<CartListProps> = ({ carts, onUpdate }) => {
         ))}
       </List>
 
+      {/* Edit Dialog */}
       <Dialog open={!!editCart} onClose={() => setEditCart(null)}>
         {editCart && (
           <CartForm
@@ -158,15 +103,18 @@ const CartList: React.FC<CartListProps> = ({ carts, onUpdate }) => {
               setEditCart(null);
             }}
             onClose={() => setEditCart(null)}
+            onError={onError}
           />
         )}
       </Dialog>
 
+      {/* Time Update Dialog */}
       <TimeUpdateDialog
         open={!!timeUpdateCart}
         cart={timeUpdateCart}
         onClose={() => setTimeUpdateCart(null)}
-        onSubmit={handleTimeUpdate}
+        onSubmit={onUpdate}
+        onError={onError}
       />
     </>
   );

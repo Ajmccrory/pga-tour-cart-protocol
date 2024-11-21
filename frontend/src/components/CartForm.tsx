@@ -13,14 +13,15 @@ import {
 import { Cart } from '../types/types';
 
 interface CartFormProps {
-  cart?: Cart;
+  cart: Cart;
   onSubmit: () => void;
   onClose: () => void;
+  onError: (message: string) => void;
 }
 
 type CartStatus = 'available' | 'in-use' | 'maintenance';
 
-const CartForm: React.FC<CartFormProps> = ({ cart, onSubmit, onClose }) => {
+const CartForm: React.FC<CartFormProps> = ({ cart, onSubmit, onClose, onError }) => {
   const [formData, setFormData] = React.useState<Partial<Cart>>(
     cart || {
       cart_number: '',

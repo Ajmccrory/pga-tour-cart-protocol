@@ -1,0 +1,26 @@
+# Cart Management System - Backend Dockerfile
+# Author: AJ McCrory
+# Created: 2024
+# Description: Builds the Python Flask backend service container
+#              Includes MySQL client and wait-for-it script for database connection handling
+
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# Install MySQL client and dos2unix for script compatibility
+RUN apt-get update && apt-get install -y default-mysql-client dos2unix
+
+# Install Python dependencies
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY backend/ .
+
+# Fix line endings and make wait-for-it script executable
+RUN dos2unix wait-for-it.sh && \
+    chmod +x wait-for-it.sh
+
+# Start the application with database connection check
+CMD ["/bin/bash", "./wait-for-it.sh", "db", "python", "run.py"] 

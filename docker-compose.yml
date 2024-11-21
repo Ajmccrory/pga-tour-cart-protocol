@@ -1,4 +1,8 @@
-version: '3.8'
+# Cart Management System - Docker Compose Configuration
+# Author: AJ McCrory
+# Created: 2024
+# Description: Orchestrates the multi-container Docker application including frontend, 
+#              backend API, and MySQL database services.
 
 services:
   frontend:
@@ -10,7 +14,7 @@ services:
     depends_on:
       - backend
     environment:
-      - REACT_APP_API_URL=${REACT_APP_API_URL}
+      - REACT_APP_API_URL=http://localhost:5000
     networks:
       - cart-network
 
@@ -21,11 +25,12 @@ services:
     ports:
       - "5000:5000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - FLASK_APP=${FLASK_APP}
-      - FLASK_ENV=${FLASK_ENV}
+      - DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE}
+      - FLASK_APP=app
+      - FLASK_ENV=development
       - SECRET_KEY=${SECRET_KEY}
     networks:
       - cart-network
@@ -43,10 +48,15 @@ services:
       - db-data:/var/lib/mysql
     networks:
       - cart-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   db-data:
 
 networks:
   cart-network:
-    driver: bridge 
+    driver: bridge
