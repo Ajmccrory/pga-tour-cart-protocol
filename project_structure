@@ -1,0 +1,14 @@
+cart-management-system/
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── styles/
+│   │   ├── types/
+│   │   └── utils/
+├── backend/
+│   ├── app/
+│   │   ├── routes/
+│   │   ├── models/
+├── database/
+└── docker/ 
