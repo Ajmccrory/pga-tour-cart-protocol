@@ -33,7 +33,7 @@ def get_persons():
 @bp.route('/persons', methods=['POST'])
 def create_person():
     """
-    Create a new person
+    Create a new person with validation
     
     Returns:
         JSON object of created person
@@ -45,6 +45,22 @@ def create_person():
         data = request.get_json()
         if not data:
             raise APIError('No data provided', 400)
+        
+        # Validate required fields
+        if not data.get('name'):
+            raise APIError('Name is required', 400)
+        
+        # Validate name uniqueness
+        if not Person.validate_name(data['name']):
+            raise APIError('A person with this full name already exists', 400)
+        
+        # Validate email format
+        if data.get('email') and not Person.validate_email(data['email']):
+            raise APIError('Invalid email format', 400)
+        
+        # Validate phone format
+        if data.get('phone') and not Person.validate_phone(data['phone']):
+            raise APIError('Invalid phone number format', 400)
             
         person = Person(
             name=data['name'],
@@ -55,8 +71,8 @@ def create_person():
         db.session.add(person)
         db.session.commit()
         return jsonify(person.to_dict()), 201
-    except KeyError as e:
-        raise APIError(f'Missing required field: {str(e)}', 400)
+    except APIError:
+        raise
     except Exception as e:
         db.session.rollback()
         raise APIError(f'Failed to create person: {str(e)}', 500)
@@ -64,7 +80,7 @@ def create_person():
 @bp.route('/persons/<int:id>', methods=['PUT'])
 def update_person(id):
     """
-    Update an existing person
+    Update an existing person with validation
     
     Args:
         id: Person ID to update
@@ -73,11 +89,24 @@ def update_person(id):
         JSON object of updated person
     
     Raises:
-        APIError: If update fails or person not found
+        APIError: If update fails or validation error occurs
     """
     try:
         person = Person.query.get_or_404(id)
         data = request.get_json()
+        
+        # Validate name uniqueness if name is being updated
+        if 'name' in data and data['name'] != person.name:
+            if not Person.validate_name(data['name']):
+                raise APIError('A person with this full name already exists', 400)
+        
+        # Validate email format
+        if 'email' in data and data['email'] and not Person.validate_email(data['email']):
+            raise APIError('Invalid email format', 400)
+        
+        # Validate phone format
+        if 'phone' in data and data['phone'] and not Person.validate_phone(data['phone']):
+            raise APIError('Invalid phone number format', 400)
         
         for field in ['name', 'role', 'phone', 'email']:
             if field in data:
@@ -85,6 +114,8 @@ def update_person(id):
         
         db.session.commit()
         return jsonify(person.to_dict())
+    except APIError:
+        raise
     except Exception as e:
         db.session.rollback()
         raise APIError(f'Failed to update person: {str(e)}', 500)

@@ -1,3 +1,9 @@
+/**
+ * Cart Management System - Person List Component
+ * @author AJ McCrory
+ * @created 2024
+ * @description Displays and manages staff members list with CRUD operations
+ */
 export interface APIError {
   message: string;
   status_code: number;

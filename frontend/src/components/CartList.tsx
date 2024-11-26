@@ -23,7 +23,7 @@ import { api } from '../utils/api';
 
 interface CartListProps {
   carts: Cart[];
-  onUpdate: () => void;
+  onUpdate: () => Promise<void>;
   onError: (message: string) => void;
 }
 
@@ -37,7 +37,7 @@ const CartList: React.FC<CartListProps> = ({ carts, onUpdate, onError }) => {
   /**
    * Formats date time for display
    */
-  const formatDateTime = (dateTime: string | null): string => {
+  const formatDateTime = (dateTime: string | null | undefined): string => {
     if (!dateTime) return 'Not set';
     return new Date(dateTime).toLocaleString();
   };

@@ -1,43 +1,44 @@
 /**
- * Cart Management System - Main Application Component
+ * Cart Management System - Root Application Component
  * @author AJ McCrory
  * @created 2024
  * @description Root component that handles theme switching and layout
  */
 
 import React, { useState } from 'react';
-import { ThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
 import { redTheme, blackTheme } from './styles/theme';
 import AdminScreen from './pages/AdminScreen';
-import { Button } from '@mui/material';
+import Layout from './components/Layout';
 import ErrorSnackbar from './components/ErrorSnackbar';
 
 const App: React.FC = () => {
   const [theme, setTheme] = useState(redTheme);
   const [error, setError] = useState<string | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const toggleTheme = () => {
     setTheme(theme === redTheme ? blackTheme : redTheme);
+    setIsDarkMode(!isDarkMode);
+  };
+
+  const handleErrorClear = () => {
+    setError(null);
   };
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Button
-        onClick={toggleTheme}
-        variant="contained"
-        style={{ position: 'absolute', top: 20, right: 20 }}
-      >
-        Toggle Theme
-      </Button>
-      <AdminScreen onError={(msg) => setError(msg)} />
+    <Layout
+      error={error}
+      onErrorClear={handleErrorClear}
+      isDarkMode={isDarkMode}
+      onThemeToggle={toggleTheme}
+    >
+      <AdminScreen onError={(msg: string) => setError(msg)} />
       <ErrorSnackbar
         open={!!error}
         message={error || ''}
-        onClose={() => setError(null)}
+        onClose={handleErrorClear}
       />
-    </ThemeProvider>
+    </Layout>
   );
 };
 

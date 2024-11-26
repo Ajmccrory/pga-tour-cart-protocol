@@ -2,8 +2,10 @@
  * Cart Management System - Type Definitions
  * @author AJ McCrory
  * @created 2024
- * @description TypeScript type definitions for the application
+ * @description Core type definitions for the application
  */
+
+import { Role } from './roles';
 
 /**
  * Cart entity interface
@@ -13,9 +15,9 @@ export interface Cart {
     cart_number: string;
     status: 'available' | 'in-use' | 'maintenance';
     battery_level: number;
-    checkout_time: string | null;
-    return_by_time: string | null;
-    assigned_to_id: number | null;
+    checkout_time: string | null | undefined;
+    return_by_time: string | null | undefined;
+    assigned_to_id?: number | null;
 }
 
 /**
@@ -24,7 +26,7 @@ export interface Cart {
 export interface Person {
     id: number;
     name: string;
-    role: 'admin' | 'volunteer';
+    role: Role;
     phone: string;
     email: string;
     active_cart: Cart[];

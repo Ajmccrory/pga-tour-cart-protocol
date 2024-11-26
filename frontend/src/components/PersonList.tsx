@@ -1,4 +1,11 @@
-import React from 'react';
+/**
+ * Cart Management System - Person List Component
+ * @author AJ McCrory
+ * @created 2024
+ * @description Displays and manages staff members list with CRUD operations
+ */
+
+import React, { useState } from 'react';
 import {
   List,
   ListItem,
@@ -10,23 +17,28 @@ import {
 import { Edit, Delete } from '@mui/icons-material';
 import { Person } from '../types/types';
 import PersonForm from './PersonForm';
+import { api } from '../utils/api';
+import { displayErrorMessage } from '../utils/errorHandling';
+import { ROLE_LABELS } from '../types/roles';
 
 interface PersonListProps {
   persons: Person[];
   onUpdate: () => void;
+  onError: (message: string) => void;
 }
 
-const PersonList: React.FC<PersonListProps> = ({ persons, onUpdate }) => {
-  const [editPerson, setEditPerson] = React.useState<Person | null>(null);
+const PersonList: React.FC<PersonListProps> = ({ persons, onUpdate, onError }) => {
+  const [editPerson, setEditPerson] = useState<Person | null>(null);
 
-  const handleDelete = async (id: string) => {
-    if (!id) return;
-    
-    if (window.confirm('Are you sure you want to delete this person?')) {
-      await fetch(`http://localhost:5000/persons/${id}`, {
-        method: 'DELETE',
-      });
-      onUpdate();
+  const handleDelete = async (personId: number) => {
+    try {
+      if (window.confirm('Are you sure you want to delete this staff member?')) {
+        await api.deletePerson(personId);
+        await onUpdate();
+      }
+    } catch (error) {
+      console.error('Delete person error:', error);
+      onError(displayErrorMessage(error));
     }
   };
 
@@ -38,10 +50,16 @@ const PersonList: React.FC<PersonListProps> = ({ persons, onUpdate }) => {
             key={person.id}
             secondaryAction={
               <>
-                <IconButton edge="end" onClick={() => setEditPerson(person)}>
+                <IconButton 
+                  onClick={() => setEditPerson(person)}
+                  aria-label="edit"
+                >
                   <Edit />
                 </IconButton>
-                <IconButton edge="end" onClick={() => person.id && handleDelete(person.id)}>
+                <IconButton 
+                  onClick={() => handleDelete(person.id)}
+                  aria-label="delete"
+                >
                   <Delete />
                 </IconButton>
               </>
@@ -52,9 +70,9 @@ const PersonList: React.FC<PersonListProps> = ({ persons, onUpdate }) => {
               secondary={
                 <>
                   <Typography component="span" variant="body2">
-                    Role: {person.role}<br />
+                    Role: {ROLE_LABELS[person.role]}<br />
                     Email: {person.email}<br />
-                    Phone: {person.phone}
+                    Phone: {person.phone || 'N/A'}
                   </Typography>
                 </>
               }
@@ -63,15 +81,20 @@ const PersonList: React.FC<PersonListProps> = ({ persons, onUpdate }) => {
         ))}
       </List>
 
-      <Dialog open={!!editPerson} onClose={() => setEditPerson(null)}>
+      <Dialog 
+        open={!!editPerson} 
+        onClose={() => setEditPerson(null)}
+        aria-labelledby="edit-person-dialog"
+      >
         {editPerson && (
           <PersonForm
             person={editPerson}
-            onSubmit={() => {
-              onUpdate();
+            onSubmit={async () => {
+              await onUpdate();
               setEditPerson(null);
             }}
             onClose={() => setEditPerson(null)}
+            onError={onError}
           />
         )}
       </Dialog>

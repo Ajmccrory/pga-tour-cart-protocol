@@ -29,3 +29,6 @@ Containerization:
     Create a docker container to store the front and backend so that the app can be hypothetically scaled.
 
 
+TODO: 
+Add an inex page that has a menu bar and a dashboard to access admin dashboard screen
+Add a screen that allows cart attendents to choose whether or not the app is being run in admin mode.
