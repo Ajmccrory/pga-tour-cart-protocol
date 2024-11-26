@@ -21,6 +21,7 @@ import {
 import { Cart } from '../types/types';
 import { api } from '../utils/api';
 import { CartStatus, CART_STATUS_LABELS } from '../types/cartStatus';
+import { RequestError } from '../utils/errorHandling';
 
 interface CartFormProps {
   cart?: Cart;
@@ -32,6 +33,8 @@ interface CartFormProps {
 interface ValidationErrors {
   cart_number?: string;
   battery_level?: string;
+  checkout_time?: string;
+  return_by_time?: string;
   general?: string;
 }
 
@@ -46,6 +49,8 @@ const CartForm: React.FC<CartFormProps> = ({
       cart_number: '',
       status: 'available' as CartStatus,
       battery_level: 100,
+      checkout_time: null,
+      return_by_time: null,
     }
   );
 
@@ -73,8 +78,38 @@ const CartForm: React.FC<CartFormProps> = ({
       isValid = false;
     }
 
+    // Time validation for 'in-use' status
+    if (formData.status === 'in-use') {
+      if (!formData.checkout_time) {
+        newErrors.checkout_time = 'Checkout time is required for in-use carts';
+        isValid = false;
+      }
+      if (!formData.return_by_time) {
+        newErrors.return_by_time = 'Return time is required for in-use carts';
+        isValid = false;
+      }
+      if (formData.checkout_time && formData.return_by_time) {
+        const checkout = new Date(formData.checkout_time);
+        const returnBy = new Date(formData.return_by_time);
+        if (returnBy <= checkout) {
+          newErrors.return_by_time = 'Return time must be after checkout time';
+          isValid = false;
+        }
+      }
+    }
+
     setErrors(newErrors);
     return isValid;
+  };
+
+  const handleStatusChange = (newStatus: CartStatus) => {
+    setFormData({
+      ...formData,
+      status: newStatus,
+      // Reset times if not in-use
+      checkout_time: newStatus === 'in-use' ? formData.checkout_time : null,
+      return_by_time: newStatus === 'in-use' ? formData.return_by_time : null,
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -93,11 +128,20 @@ const CartForm: React.FC<CartFormProps> = ({
       }
       onSubmit();
       onClose();
-    } catch (error: any) {
-      if (error.message.includes('cart number already exists')) {
-        setErrors({ cart_number: 'This cart number is already in use' });
+    } catch (error) {
+      if (error instanceof RequestError) {
+        // Handle specific error cases
+        if (error.message.includes('already exists')) {
+          setErrors({ cart_number: error.message });
+        } else if (error.message.includes('Battery level')) {
+          setErrors({ battery_level: error.message });
+        } else if (error.message.includes('status')) {
+          setErrors({ general: error.message });
+        } else {
+          setErrors({ general: error.message });
+        }
       } else {
-        setErrors({ general: error.message });
+        setErrors({ general: 'An unexpected error occurred. Please try again.' });
       }
     }
   };
@@ -129,7 +173,7 @@ const CartForm: React.FC<CartFormProps> = ({
           <InputLabel>Status</InputLabel>
           <Select
             value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value as CartStatus })}
+            onChange={(e) => handleStatusChange(e.target.value as CartStatus)}
           >
             {Object.entries(CART_STATUS_LABELS).map(([value, label]) => (
               <MenuItem key={value} value={value}>
@@ -154,6 +198,42 @@ const CartForm: React.FC<CartFormProps> = ({
           helperText={errors.battery_level || 'Enter a value between 0 and 100'}
           inputProps={{ min: 0, max: 100 }}
         />
+
+        {formData.status === 'in-use' && (
+          <>
+            <TextField
+              fullWidth
+              type="datetime-local"
+              label="Checkout Time"
+              value={formData.checkout_time || ''}
+              onChange={(e) => setFormData({
+                ...formData,
+                checkout_time: e.target.value
+              })}
+              margin="normal"
+              required
+              error={!!errors.checkout_time}
+              helperText={errors.checkout_time}
+              InputLabelProps={{ shrink: true }}
+            />
+
+            <TextField
+              fullWidth
+              type="datetime-local"
+              label="Return By"
+              value={formData.return_by_time || ''}
+              onChange={(e) => setFormData({
+                ...formData,
+                return_by_time: e.target.value
+              })}
+              margin="normal"
+              required
+              error={!!errors.return_by_time}
+              helperText={errors.return_by_time}
+              InputLabelProps={{ shrink: true }}
+            />
+          </>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>

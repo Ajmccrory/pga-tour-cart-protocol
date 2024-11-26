@@ -5,7 +5,7 @@
  * @description Dialog for updating cart checkout and return times
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -17,12 +17,13 @@ import {
 } from '@mui/material';
 import { Cart } from '../types/types';
 import { api } from '../utils/api';
+import { RequestError } from '../utils/errorHandling';
 
 interface TimeUpdateDialogProps {
   open: boolean;
   cart: Cart | null;
   onClose: () => void;
-  onSubmit: () => void;
+  onSubmit: () => Promise<void>;
   onError: (message: string) => void;
 }
 
@@ -42,6 +43,13 @@ const TimeUpdateDialog: React.FC<TimeUpdateDialogProps> = ({
   const [checkoutTime, setCheckoutTime] = useState(cart?.checkout_time || '');
   const [returnTime, setReturnTime] = useState(cart?.return_by_time || '');
   const [errors, setErrors] = useState<ValidationErrors>({});
+
+  useEffect(() => {
+    if (cart) {
+      setCheckoutTime(cart.checkout_time || '');
+      setReturnTime(cart.return_by_time || '');
+    }
+  }, [cart]);
 
   const validateTimes = (): boolean => {
     const newErrors: ValidationErrors = {};
@@ -87,15 +95,25 @@ const TimeUpdateDialog: React.FC<TimeUpdateDialogProps> = ({
 
       await api.updateCart(cart.id, {
         ...cart,
+        status: 'in-use',
         checkout_time: checkoutTime,
         return_by_time: returnTime,
-        status: 'in-use',
       });
 
-      onSubmit();
+      await onSubmit();
       onClose();
-    } catch (error: any) {
-      setErrors({ general: error.message });
+    } catch (error) {
+      if (error instanceof RequestError) {
+        if (error.message.includes('checkout_time')) {
+          setErrors({ checkout_time: error.message });
+        } else if (error.message.includes('return_by_time')) {
+          setErrors({ return_by_time: error.message });
+        } else {
+          setErrors({ general: error.message });
+        }
+      } else {
+        setErrors({ general: 'Failed to update cart times. Please try again.' });
+      }
     }
   };
 

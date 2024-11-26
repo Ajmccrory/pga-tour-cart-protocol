@@ -8,13 +8,13 @@ Description: Flask application factory that initializes the app with all necessa
 
 from flask import Flask
 from flask_cors import CORS
+import pymysql
 from flask_sqlalchemy import SQLAlchemy
 from config import Config
-import pymysql
 
-pymysql.install_as_MySQLdb()
-
+# Initialize SQLAlchemy before any other database operations
 db = SQLAlchemy()
+pymysql.install_as_MySQLdb()
 
 def create_app():
     """
