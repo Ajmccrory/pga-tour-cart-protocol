@@ -1,12 +1,12 @@
 /**
- * Cart Management System - API Utilities
+ * Cart Management System - API Client
  * @author AJ McCrory
  * @created 2024
  * @description API client for making requests to the backend
  */
 
 import { Cart, Person } from '../types/types';
-import { handleApiError } from './errorHandling';
+import { handleApiError, RequestError } from './errorHandling';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || window.location.hostname === 'localhost' 
   ? 'http://localhost:5000'
@@ -23,7 +23,6 @@ export const api = {
       await handleApiError(response);
       return response.json();
     } catch (error) {
-      console.error('Error fetching carts:', error);
       throw error;
     }
   },
@@ -37,11 +36,18 @@ export const api = {
         },
         body: JSON.stringify(cart),
       });
-      await handleApiError(response);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new RequestError(errorData.message, response.status);
+      }
+      
       return response.json();
     } catch (error) {
-      console.error('Error creating cart:', error);
-      throw error;
+      if (error instanceof RequestError) {
+        throw error;
+      }
+      throw new RequestError('Failed to create cart', 500);
     }
   },
 
@@ -57,7 +63,6 @@ export const api = {
       await handleApiError(response);
       return response.json();
     } catch (error) {
-      console.error('Error updating cart:', error);
       throw error;
     }
   },
@@ -69,7 +74,6 @@ export const api = {
       });
       await handleApiError(response);
     } catch (error) {
-      console.error('Error deleting cart:', error);
       throw error;
     }
   },
@@ -97,7 +101,6 @@ export const api = {
       await handleApiError(response);
       return response.json();
     } catch (error) {
-      console.error('Error fetching persons:', error);
       throw error;
     }
   },
@@ -114,7 +117,6 @@ export const api = {
       await handleApiError(response);
       return response.json();
     } catch (error) {
-      console.error('Error creating person:', error);
       throw error;
     }
   },
@@ -131,7 +133,6 @@ export const api = {
       await handleApiError(response);
       return response.json();
     } catch (error) {
-      console.error('Error updating person:', error);
       throw error;
     }
   },
@@ -149,7 +150,6 @@ export const api = {
         throw new Error(`Failed to delete person: ${response.statusText}`);
       }
     } catch (error) {
-      console.error('Error deleting person:', error);
       throw error;
     }
   },

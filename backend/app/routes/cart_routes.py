@@ -42,11 +42,14 @@ def create_cart():
         # Check if cart number already exists
         existing_cart = Cart.query.filter_by(cart_number=data['cart_number']).first()
         if existing_cart:
-            raise APIError('Cart number already exists', 409)
+            raise APIError(f"Cart number '{data['cart_number']}' already exists", 409)
 
         cart = Cart(
             cart_number=data['cart_number'],
             battery_level=data.get('battery_level', 100),
+            status=data.get('status', 'available'),
+            checkout_time=data.get('checkout_time'),
+            return_by_time=data.get('return_by_time')
         )
         db.session.add(cart)
         db.session.commit()

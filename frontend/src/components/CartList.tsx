@@ -7,19 +7,55 @@
 
 import React, { useState } from 'react';
 import {
-  List,
-  ListItem,
-  ListItemText,
+  Grid,
+  Card,
+  CardContent,
   IconButton,
   Dialog,
   Typography,
+  Box,
+  styled,
+  Tooltip,
+  Chip,
 } from '@mui/material';
-import { Edit, Delete, Timer } from '@mui/icons-material';
+import { Edit, Delete, Timer, Battery20, Battery50, Battery80, BatteryFull } from '@mui/icons-material';
 import { Cart } from '../types/types';
 import CartForm from './CartForm';
 import TimeUpdateDialog from './TimeUpdateDialog';
 import { displayErrorMessage } from '../utils/errorHandling';
 import { api } from '../utils/api';
+import { CART_STATUS_LABELS } from '../types/cartStatus';
+
+const StyledCard = styled(Card)(({ theme }) => ({
+  height: '100%',
+  transition: 'transform 0.2s, box-shadow 0.2s',
+  '&:hover': {
+    transform: 'translateY(-4px)',
+    boxShadow: theme.shadows[8],
+  },
+}));
+
+const StatusChip = styled(Chip)<{ status: string }>(({ theme, status }) => {
+  const colors = {
+    available: theme.palette.success.main,
+    'in-use': theme.palette.info.main,
+    maintenance: theme.palette.error.main,
+  };
+  return {
+    backgroundColor: colors[status as keyof typeof colors],
+    color: theme.palette.common.white,
+    fontWeight: 'bold',
+  };
+});
+
+const ActionButton = styled(IconButton)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  boxShadow: theme.shadows[2],
+  '&:hover': {
+    backgroundColor: theme.palette.action.hover,
+  },
+  margin: theme.spacing(0.5),
+}));
 
 interface CartListProps {
   carts: Cart[];
@@ -27,29 +63,27 @@ interface CartListProps {
   onError: (message: string) => void;
 }
 
-/**
- * CartList component for displaying and managing carts
- */
 const CartList: React.FC<CartListProps> = ({ carts, onUpdate, onError }) => {
   const [editCart, setEditCart] = useState<Cart | null>(null);
   const [timeUpdateCart, setTimeUpdateCart] = useState<Cart | null>(null);
 
-  /**
-   * Formats date time for display
-   */
+  const getBatteryIcon = (level: number) => {
+    if (level > 80) return <BatteryFull color="success" />;
+    if (level > 50) return <Battery80 color="info" />;
+    if (level > 20) return <Battery50 color="warning" />;
+    return <Battery20 color="error" />;
+  };
+
   const formatDateTime = (dateTime: string | null | undefined): string => {
     if (!dateTime) return 'Not set';
     return new Date(dateTime).toLocaleString();
   };
 
-  /**
-   * Handles cart deletion
-   */
   const handleDelete = async (id: number) => {
     try {
       if (window.confirm('Are you sure you want to delete this cart?')) {
         await api.deleteCart(id);
-        onUpdate();
+        await onUpdate();
       }
     } catch (error) {
       onError(displayErrorMessage(error));
@@ -58,57 +92,74 @@ const CartList: React.FC<CartListProps> = ({ carts, onUpdate, onError }) => {
 
   return (
     <>
-      <List>
+      <Grid container spacing={3}>
         {carts.map((cart) => (
-          <ListItem
-            key={cart.id}
-            secondaryAction={
-              <>
-                <IconButton onClick={() => setTimeUpdateCart(cart)}>
-                  <Timer />
-                </IconButton>
-                <IconButton edge="end" onClick={() => setEditCart(cart)}>
-                  <Edit />
-                </IconButton>
-                <IconButton edge="end" onClick={() => handleDelete(cart.id)}>
-                  <Delete />
-                </IconButton>
-              </>
-            }
-          >
-            <ListItemText
-              primary={`Cart #${cart.cart_number}`}
-              secondary={
-                <>
-                  <Typography component="span" variant="body2">
-                    Status: {cart.status}<br />
-                    Battery: {cart.battery_level}%<br />
-                    Checkout: {formatDateTime(cart.checkout_time)}<br />
-                    Return By: {formatDateTime(cart.return_by_time)}
+          <Grid item xs={12} sm={6} md={4} key={cart.id}>
+            <StyledCard>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6">
+                    Cart #{cart.cart_number}
                   </Typography>
-                </>
-              }
-            />
-          </ListItem>
-        ))}
-      </List>
+                  <StatusChip
+                    label={CART_STATUS_LABELS[cart.status as keyof typeof CART_STATUS_LABELS]}
+                    status={cart.status}
+                    size="small"
+                  />
+                </Box>
 
-      {/* Edit Dialog */}
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  {getBatteryIcon(cart.battery_level)}
+                  <Typography variant="body2" sx={{ ml: 1 }}>
+                    {cart.battery_level}%
+                  </Typography>
+                </Box>
+
+                {cart.status === 'in-use' && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Checkout: {formatDateTime(cart.checkout_time)}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Return By: {formatDateTime(cart.return_by_time)}
+                    </Typography>
+                  </Box>
+                )}
+
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                  <Tooltip title="Update Times">
+                    <ActionButton size="small" onClick={() => setTimeUpdateCart(cart)}>
+                      <Timer />
+                    </ActionButton>
+                  </Tooltip>
+                  <Tooltip title="Edit Cart">
+                    <ActionButton size="small" onClick={() => setEditCart(cart)}>
+                      <Edit />
+                    </ActionButton>
+                  </Tooltip>
+                  <Tooltip title="Delete Cart">
+                    <ActionButton size="small" onClick={() => handleDelete(cart.id)}>
+                      <Delete />
+                    </ActionButton>
+                  </Tooltip>
+                </Box>
+              </CardContent>
+            </StyledCard>
+          </Grid>
+        ))}
+      </Grid>
+
       <Dialog open={!!editCart} onClose={() => setEditCart(null)}>
         {editCart && (
           <CartForm
             cart={editCart}
-            onSubmit={() => {
-              onUpdate();
-              setEditCart(null);
-            }}
+            onSubmit={onUpdate}
             onClose={() => setEditCart(null)}
             onError={onError}
           />
         )}
       </Dialog>
 
-      {/* Time Update Dialog */}
       <TimeUpdateDialog
         open={!!timeUpdateCart}
         cart={timeUpdateCart}

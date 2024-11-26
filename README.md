@@ -23,9 +23,12 @@ A system for managing golf carts, tracking their status, and handling rentals.
 1. Clone the repository
 2. Install Docker and Docker Compose
 3. Copy `.env.example` to `.env` and update the values
+4. Copy `.db_credentials.json.example` to `.db_credentials.json` and update the values
 4. Run `docker-compose up --build`
 
 ## Development
+
+### Create and Start Venv
 
 ### Frontend 
 ```bash
@@ -42,8 +45,6 @@ flask run
 ```
 
 ### Database
-
-The database will be automatically initialized when running with Docker. For local development:
 
 1. Create a MySQL database
 2. Update the DATABASE_URL in .env
