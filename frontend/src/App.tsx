@@ -11,6 +11,10 @@ import AdminScreen from './pages/AdminScreen';
 import Layout from './components/Layout';
 import ErrorSnackbar from './components/ErrorSnackbar';
 
+interface ErrorHandlingProps {
+  onError: (message: string) => void;
+}
+
 const App: React.FC = () => {
   const [theme, setTheme] = useState(redTheme);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +36,7 @@ const App: React.FC = () => {
       isDarkMode={isDarkMode}
       onThemeToggle={toggleTheme}
     >
-      <AdminScreen onError={(msg: string) => setError(msg)} />
+      <AdminScreen />
       <ErrorSnackbar
         open={!!error}
         message={error || ''}

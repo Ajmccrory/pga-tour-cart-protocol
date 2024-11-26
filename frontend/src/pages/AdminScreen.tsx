@@ -12,6 +12,8 @@ import {
     Typography,
     Button,
     Dialog,
+    Box,
+    styled,
 } from '@mui/material';
 import { Cart, Person } from '../types/types';
 import CartList from '../components/CartList';
@@ -21,22 +23,27 @@ import PersonForm from '../components/PersonForm';
 import Dashboard from '../components/Dashboard';
 import { api } from '../utils/api';
 import { displayErrorMessage } from '../utils/errorHandling';
+import { Add as AddIcon } from '@mui/icons-material';
 
-interface AdminScreenProps {
-    onError: (message: string) => void;
-}
+const StyledPaper = styled(Paper)(({ theme }) => ({
+    padding: theme.spacing(3),
+    borderRadius: theme.spacing(2),
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+}));
 
-const AdminScreen: React.FC<AdminScreenProps> = ({ onError }) => {
+const ActionButton = styled(Button)(({ theme }) => ({
+    borderRadius: theme.spacing(2),
+    padding: theme.spacing(1, 3),
+    marginBottom: theme.spacing(2),
+}));
+
+const AdminScreen: React.FC = () => {
     const [carts, setCarts] = useState<Cart[]>([]);
     const [persons, setPersons] = useState<Person[]>([]);
     const [openCartDialog, setOpenCartDialog] = useState(false);
     const [openPersonDialog, setOpenPersonDialog] = useState(false);
     const [loading, setLoading] = useState(true);
     const [dashboardError, setDashboardError] = useState<string | null>(null);
-
-    useEffect(() => {
-        fetchData();
-    }, []);
 
     const fetchData = async () => {
         setLoading(true);
@@ -51,63 +58,78 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onError }) => {
         } catch (error) {
             const errorMessage = displayErrorMessage(error);
             setDashboardError(errorMessage);
-            onError(errorMessage);
         } finally {
             setLoading(false);
         }
     };
 
-    return (
-        <Grid container spacing={3}>
-            <Grid item xs={12}>
-                <Dashboard 
-                    carts={carts}
-                    loading={loading}
-                    error={dashboardError}
-                />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-                <Paper sx={{ p: 2 }}>
-                    <Typography variant="h6">Carts</Typography>
-                    <Button 
-                        variant="contained" 
-                        onClick={() => setOpenCartDialog(true)}
-                        sx={{ mb: 2 }}
-                    >
-                        Add Cart
-                    </Button>
-                    <CartList 
-                        carts={carts} 
-                        onUpdate={fetchData}
-                        onError={onError}
-                    />
-                </Paper>
-            </Grid>
+    useEffect(() => {
+        fetchData();
+    }, []);
 
-            <Grid item xs={12} md={6}>
-                <Paper sx={{ p: 2 }}>
-                    <Typography variant="h6">Staff</Typography>
-                    <Button 
-                        variant="contained" 
-                        onClick={() => setOpenPersonDialog(true)}
-                        sx={{ mb: 2 }}
-                    >
-                        Add Staff
-                    </Button>
-                    <PersonList 
-                        persons={persons} 
+    const handleError = (message: string) => {
+        setDashboardError(message);
+    };
+
+    return (
+        <Box sx={{ p: 3 }}>
+            <Grid container spacing={3}>
+                <Grid item xs={12}>
+                    <Dashboard 
+                        carts={carts}
+                        loading={loading}
+                        error={dashboardError}
                         onUpdate={fetchData}
-                        onError={onError}
+                        onError={handleError}
                     />
-                </Paper>
+                </Grid>
+                
+                <Grid item xs={12} md={6}>
+                    <StyledPaper>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                            <Typography variant="h6">Carts</Typography>
+                            <ActionButton 
+                                variant="contained" 
+                                onClick={() => setOpenCartDialog(true)}
+                                startIcon={<AddIcon />}
+                            >
+                                Add Cart
+                            </ActionButton>
+                        </Box>
+                        <CartList 
+                            carts={carts} 
+                            onUpdate={fetchData}
+                            onError={handleError}
+                        />
+                    </StyledPaper>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                    <StyledPaper>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                            <Typography variant="h6">Staff</Typography>
+                            <ActionButton 
+                                variant="contained" 
+                                onClick={() => setOpenPersonDialog(true)}
+                                startIcon={<AddIcon />}
+                            >
+                                Add Staff
+                            </ActionButton>
+                        </Box>
+                        <PersonList 
+                            persons={persons} 
+                            onUpdate={fetchData}
+                            onError={handleError}
+                        />
+                    </StyledPaper>
+                </Grid>
             </Grid>
 
             <Dialog open={openCartDialog} onClose={() => setOpenCartDialog(false)}>
                 <CartForm 
                     onSubmit={fetchData} 
                     onClose={() => setOpenCartDialog(false)}
-                    onError={onError}
+                    onError={handleError}
                 />
             </Dialog>
 
@@ -115,10 +137,10 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onError }) => {
                 <PersonForm 
                     onSubmit={fetchData} 
                     onClose={() => setOpenPersonDialog(false)}
-                    onError={onError}
+                    onError={handleError}
                 />
             </Dialog>
-        </Grid>
+        </Box>
     );
 };
 

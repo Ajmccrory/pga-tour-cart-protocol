@@ -2,7 +2,7 @@
  * Cart Management System - Person Form Component
  * @author AJ McCrory
  * @created 2024
- * @description Form for creating and editing staff members with validation
+ * @description Form for creating and editing staff members
  */
 
 import React, { useState } from 'react';
@@ -16,12 +16,40 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  FormHelperText,
   Alert,
+  Box,
+  styled,
+  Paper,
+  Typography,
 } from '@mui/material';
 import { Person } from '../types/types';
 import { Role, ROLE_LABELS } from '../types/roles';
 import { api } from '../utils/api';
+import { RequestError } from '../utils/errorHandling';
+import { Person as PersonIcon, Email, Phone, Badge } from '@mui/icons-material';
+
+const StyledPaper = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(3),
+  borderRadius: theme.spacing(2),
+  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+}));
+
+const StyledDialogContent = styled(DialogContent)(({ theme }) => ({
+  minWidth: '500px',
+  padding: theme.spacing(3),
+}));
+
+const FormSection = styled(Box)(({ theme }) => ({
+  marginBottom: theme.spacing(3),
+}));
+
+const IconWrapper = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(1),
+  marginBottom: theme.spacing(1),
+  color: theme.palette.primary.main,
+}));
 
 interface PersonFormProps {
   person?: Person;
@@ -54,18 +82,6 @@ const PersonForm: React.FC<PersonFormProps> = ({
 
   const [errors, setErrors] = useState<ValidationErrors>({});
 
-  const validateEmail = (email: string): boolean => {
-    if (!email) return true; // Email is optional
-    const pattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    return pattern.test(email);
-  };
-
-  const validatePhone = (phone: string): boolean => {
-    if (!phone) return true; // Phone is optional
-    const pattern = /^\+?1?\d{9,15}$/;
-    return pattern.test(phone);
-  };
-
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {};
     let isValid = true;
@@ -77,14 +93,14 @@ const PersonForm: React.FC<PersonFormProps> = ({
     }
 
     // Email validation
-    if (formData.email && !validateEmail(formData.email)) {
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Invalid email format';
       isValid = false;
     }
 
     // Phone validation
-    if (formData.phone && !validatePhone(formData.phone)) {
-      newErrors.phone = 'Invalid phone number format (e.g., +11234567890)';
+    if (formData.phone && !/^\+?[\d\s-]{10,}$/.test(formData.phone)) {
+      newErrors.phone = 'Invalid phone number format';
       isValid = false;
     }
 
@@ -108,78 +124,109 @@ const PersonForm: React.FC<PersonFormProps> = ({
       }
       onSubmit();
       onClose();
-    } catch (error: any) {
-      // Handle API errors
-      if (error.message.includes('full name already exists')) {
-        setErrors({ name: 'A person with this full name already exists' });
+    } catch (error) {
+      if (error instanceof RequestError) {
+        if (error.message.includes('name already exists')) {
+          setErrors({ name: error.message });
+        } else {
+          setErrors({ general: error.message });
+        }
       } else {
-        setErrors({ general: error.message });
+        setErrors({ general: 'An unexpected error occurred. Please try again.' });
       }
     }
   };
 
   return (
     <form onSubmit={handleSubmit}>
-      <DialogTitle>
+      <DialogTitle sx={{ pb: 0 }}>
         {person ? 'Edit Staff Member' : 'New Staff Member'}
       </DialogTitle>
-      <DialogContent>
+      <StyledDialogContent>
         {errors.general && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ mb: 3 }}>
             {errors.general}
           </Alert>
         )}
 
-        <TextField
-          fullWidth
-          label="Name"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          margin="normal"
-          required
-          error={!!errors.name}
-          helperText={errors.name}
-        />
+        <StyledPaper>
+          <FormSection>
+            <IconWrapper>
+              <PersonIcon />
+              <Typography variant="subtitle2">Personal Information</Typography>
+            </IconWrapper>
+            <TextField
+              fullWidth
+              label="Full Name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+              error={!!errors.name}
+              helperText={errors.name}
+              sx={{ mb: 2 }}
+            />
 
-        <FormControl fullWidth margin="normal" required>
-          <InputLabel>Role</InputLabel>
-          <Select
-            value={formData.role}
-            onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
-          >
-            {Object.entries(ROLE_LABELS).map(([value, label]) => (
-              <MenuItem key={value} value={value}>
-                {label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+            <FormControl fullWidth required sx={{ mb: 2 }}>
+              <InputLabel>Role</InputLabel>
+              <Select
+                value={formData.role}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
+                startAdornment={<Badge sx={{ mr: 1 }} />}
+              >
+                {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                  <MenuItem key={value} value={value}>
+                    {label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </FormSection>
 
-        <TextField
-          fullWidth
-          label="Phone"
-          value={formData.phone}
-          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-          margin="normal"
-          error={!!errors.phone}
-          helperText={errors.phone || 'Format: +11234567890'}
-        />
+          <FormSection>
+            <IconWrapper>
+              <Email />
+              <Typography variant="subtitle2">Contact Information</Typography>
+            </IconWrapper>
+            <TextField
+              fullWidth
+              label="Email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              error={!!errors.email}
+              helperText={errors.email}
+              sx={{ mb: 2 }}
+            />
 
-        <TextField
-          fullWidth
-          label="Email"
-          type="email"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          margin="normal"
-          error={!!errors.email}
-          helperText={errors.email}
-        />
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button type="submit" variant="contained" color="primary">
-          {person ? 'Update' : 'Create'}
+            <TextField
+              fullWidth
+              label="Phone"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              error={!!errors.phone}
+              helperText={errors.phone || 'Format: +1234567890'}
+              InputProps={{
+                startAdornment: <Phone sx={{ mr: 1, color: 'action.active' }} />,
+              }}
+            />
+          </FormSection>
+        </StyledPaper>
+      </StyledDialogContent>
+      <DialogActions sx={{ p: 3 }}>
+        <Button 
+          onClick={onClose}
+          variant="outlined"
+          sx={{ borderRadius: 2 }}
+        >
+          Cancel
+        </Button>
+        <Button 
+          type="submit" 
+          variant="contained" 
+          color="primary"
+          sx={{ borderRadius: 2 }}
+        >
+          {person ? 'Update Staff Member' : 'Create Staff Member'}
         </Button>
       </DialogActions>
     </form>

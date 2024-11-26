@@ -17,11 +17,30 @@ import {
   FormControl,
   InputLabel,
   Alert,
+  Box,
+  styled,
+  Paper,
 } from '@mui/material';
 import { Cart } from '../types/types';
 import { api } from '../utils/api';
 import { CartStatus, CART_STATUS_LABELS } from '../types/cartStatus';
 import { RequestError } from '../utils/errorHandling';
+import BatteryGauge from './BatteryGauge';
+
+const StyledPaper = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(3),
+  borderRadius: theme.spacing(2),
+  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+}));
+
+const StyledDialogContent = styled(DialogContent)(({ theme }) => ({
+  minWidth: '500px',
+  padding: theme.spacing(3),
+}));
+
+const FormSection = styled(Box)(({ theme }) => ({
+  marginBottom: theme.spacing(3),
+}));
 
 interface CartFormProps {
   cart?: Cart;
@@ -148,97 +167,139 @@ const CartForm: React.FC<CartFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit}>
-      <DialogTitle>
+      <DialogTitle sx={{ pb: 0 }}>
         {cart ? 'Edit Cart' : 'New Cart'}
       </DialogTitle>
-      <DialogContent>
+      <StyledDialogContent>
         {errors.general && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ mb: 3 }}>
             {errors.general}
           </Alert>
         )}
 
-        <TextField
-          fullWidth
-          label="Cart Number"
-          value={formData.cart_number}
-          onChange={(e) => setFormData({ ...formData, cart_number: e.target.value })}
-          margin="normal"
-          required
-          error={!!errors.cart_number}
-          helperText={errors.cart_number || 'Use letters, numbers, and hyphens only'}
-        />
-
-        <FormControl fullWidth margin="normal" required>
-          <InputLabel>Status</InputLabel>
-          <Select
-            value={formData.status}
-            onChange={(e) => handleStatusChange(e.target.value as CartStatus)}
-          >
-            {Object.entries(CART_STATUS_LABELS).map(([value, label]) => (
-              <MenuItem key={value} value={value}>
-                {label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <TextField
-          fullWidth
-          type="number"
-          label="Battery Level"
-          value={formData.battery_level}
-          onChange={(e) => setFormData({
-            ...formData,
-            battery_level: parseInt(e.target.value)
-          })}
-          margin="normal"
-          required
-          error={!!errors.battery_level}
-          helperText={errors.battery_level || 'Enter a value between 0 and 100'}
-          inputProps={{ min: 0, max: 100 }}
-        />
-
-        {formData.status === 'in-use' && (
-          <>
+        <StyledPaper>
+          <FormSection>
             <TextField
               fullWidth
-              type="datetime-local"
-              label="Checkout Time"
-              value={formData.checkout_time || ''}
-              onChange={(e) => setFormData({
-                ...formData,
-                checkout_time: e.target.value
-              })}
-              margin="normal"
+              label="Cart Number"
+              value={formData.cart_number}
+              onChange={(e) => setFormData({ ...formData, cart_number: e.target.value })}
               required
-              error={!!errors.checkout_time}
-              helperText={errors.checkout_time}
-              InputLabelProps={{ shrink: true }}
+              error={!!errors.cart_number}
+              helperText={errors.cart_number || 'Use letters, numbers, and hyphens only'}
+              sx={{ mb: 2 }}
             />
 
-            <TextField
-              fullWidth
-              type="datetime-local"
-              label="Return By"
-              value={formData.return_by_time || ''}
-              onChange={(e) => setFormData({
-                ...formData,
-                return_by_time: e.target.value
-              })}
-              margin="normal"
-              required
-              error={!!errors.return_by_time}
-              helperText={errors.return_by_time}
-              InputLabelProps={{ shrink: true }}
-            />
-          </>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button type="submit" variant="contained" color="primary">
-          {cart ? 'Update' : 'Create'}
+            <FormControl fullWidth required sx={{ mb: 2 }}>
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={formData.status}
+                onChange={(e) => handleStatusChange(e.target.value as CartStatus)}
+                sx={{
+                  '& .MuiSelect-select': {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                  },
+                }}
+              >
+                {Object.entries(CART_STATUS_LABELS).map(([value, label]) => (
+                  <MenuItem 
+                    key={value} 
+                    value={value}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: '50%',
+                        bgcolor: value === 'available' ? '#4caf50' : 
+                                value === 'in-use' ? '#2196f3' : '#f44336',
+                      }}
+                    />
+                    {label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <Box sx={{ mb: 2 }}>
+              <TextField
+                fullWidth
+                type="number"
+                label="Battery Level"
+                value={formData.battery_level}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  battery_level: parseInt(e.target.value)
+                })}
+                required
+                error={!!errors.battery_level}
+                helperText={errors.battery_level || 'Enter a value between 0 and 100'}
+                inputProps={{ min: 0, max: 100 }}
+              />
+              <Box sx={{ mt: 1 }}>
+                <BatteryGauge level={formData.battery_level || 0} />
+              </Box>
+            </Box>
+          </FormSection>
+
+          {formData.status === 'in-use' && (
+            <FormSection>
+              <TextField
+                fullWidth
+                type="datetime-local"
+                label="Checkout Time"
+                value={formData.checkout_time || ''}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  checkout_time: e.target.value
+                })}
+                required
+                error={!!errors.checkout_time}
+                helperText={errors.checkout_time}
+                InputLabelProps={{ shrink: true }}
+                sx={{ mb: 2 }}
+              />
+
+              <TextField
+                fullWidth
+                type="datetime-local"
+                label="Return By"
+                value={formData.return_by_time || ''}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  return_by_time: e.target.value
+                })}
+                required
+                error={!!errors.return_by_time}
+                helperText={errors.return_by_time}
+                InputLabelProps={{ shrink: true }}
+              />
+            </FormSection>
+          )}
+        </StyledPaper>
+      </StyledDialogContent>
+      <DialogActions sx={{ p: 3 }}>
+        <Button 
+          onClick={onClose}
+          variant="outlined"
+          sx={{ borderRadius: 2 }}
+        >
+          Cancel
+        </Button>
+        <Button 
+          type="submit" 
+          variant="contained" 
+          color="primary"
+          sx={{ borderRadius: 2 }}
+        >
+          {cart ? 'Update Cart' : 'Create Cart'}
         </Button>
       </DialogActions>
     </form>
