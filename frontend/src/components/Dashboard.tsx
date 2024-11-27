@@ -16,9 +16,10 @@ import {
   useTheme,
   styled,
   Dialog,
+  Button,
 } from '@mui/material';
 import { Cart } from '../types/types';
-import { CART_STATUS_LABELS } from '../types/cartStatus';
+import { CART_STATUS_LABELS, CartStatus } from '../types/cartStatus';
 import BatteryGauge from './BatteryGauge';
 import CartForm from './CartForm';
 
@@ -37,6 +38,19 @@ const StyledCard = styled(Card)(({ theme }) => ({
   '&:hover': {
     transform: 'scale(1.02)',
   },
+}));
+
+const StatusButton = styled(Button)<{ active?: boolean; statuscolor: string }>(({ theme, active, statuscolor }) => ({
+  flex: 1,
+  padding: theme.spacing(2),
+  backgroundColor: active ? statuscolor : theme.palette.background.paper,
+  color: active ? theme.palette.common.white : theme.palette.text.primary,
+  '&:hover': {
+    backgroundColor: active ? statuscolor : theme.palette.action.hover,
+    transform: 'translateY(-2px)',
+  },
+  transition: 'all 0.2s',
+  boxShadow: active ? theme.shadows[4] : theme.shadows[1],
 }));
 
 const StatusBadge = styled(Box)<{ status: string }>(({ theme, status }) => {
@@ -66,6 +80,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const theme = useTheme();
   const [selectedCart, setSelectedCart] = useState<Cart | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<CartStatus | null>(null);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -88,44 +103,44 @@ const Dashboard: React.FC<DashboardProps> = ({
     setSelectedCart(null);
   };
 
+  const filteredCarts = selectedStatus 
+    ? carts.filter(cart => cart.status === selectedStatus)
+    : carts;
+
   return (
     <Box sx={{ p: 3 }}>
       <Grid container spacing={3}>
-        {/* Summary Cards */}
+        {/* Status Filter Buttons */}
         <Grid item xs={12}>
-          <Grid container spacing={2}>
+          <Box sx={{ display: 'flex', gap: 2 }}>
             {Object.entries(CART_STATUS_LABELS).map(([status, label]) => {
               const statusCarts = carts.filter(cart => cart.status === status);
+              const statusColor = getStatusColor(status);
               return (
-                <Grid item xs={12} sm={4} key={status}>
-                  <Paper
-                    sx={{
-                      p: 2,
-                      bgcolor: getStatusColor(status),
-                      color: 'white',
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      transition: 'transform 0.2s',
-                      '&:hover': {
-                        transform: 'translateY(-4px)',
-                      },
-                    }}
-                  >
-                    <Typography variant="h4">
+                <StatusButton
+                  key={status}
+                  onClick={() => setSelectedStatus(selectedStatus === status ? null : status as CartStatus)}
+                  active={selectedStatus === status}
+                  statuscolor={statusColor}
+                >
+                  <Box>
+                    <Typography variant="h4" component="div">
                       {statusCarts.length}
                     </Typography>
-                    <Typography variant="subtitle1">{label}</Typography>
-                  </Paper>
-                </Grid>
+                    <Typography variant="subtitle1">
+                      {label}
+                    </Typography>
+                  </Box>
+                </StatusButton>
               );
             })}
-          </Grid>
+          </Box>
         </Grid>
 
         {/* Cart Grid */}
         <Grid item xs={12}>
           <Grid container spacing={2}>
-            {carts.map((cart) => (
+            {filteredCarts.map((cart) => (
               <Grid item xs={12} sm={6} md={4} lg={3} key={cart.id}>
                 <StyledCard onClick={() => handleCartClick(cart)}>
                   <CardContent sx={{ position: 'relative', minHeight: '200px' }}>
