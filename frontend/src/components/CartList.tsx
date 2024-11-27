@@ -18,13 +18,15 @@ import {
   Tooltip,
   Chip,
 } from '@mui/material';
-import { Edit, Delete, Timer, Battery20, Battery50, Battery80, BatteryFull } from '@mui/icons-material';
+import { Edit, Delete, Timer, History, Battery20, Battery50, Battery80, BatteryFull, AssignmentReturn } from '@mui/icons-material';
 import { Cart } from '../types/types';
 import CartForm from './CartForm';
 import TimeUpdateDialog from './TimeUpdateDialog';
 import { displayErrorMessage } from '../utils/errorHandling';
 import { api } from '../utils/api';
 import { CART_STATUS_LABELS } from '../types/cartStatus';
+import CartHistoryDialog from './CartHistoryDialog';
+import CartReturnDialog from './CartReturnDialog';
 
 const StyledCard = styled(Card)(({ theme }) => ({
   height: '100%',
@@ -57,6 +59,14 @@ const ActionButton = styled(IconButton)(({ theme }) => ({
   margin: theme.spacing(0.5),
 }));
 
+const ActionButtons = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  gap: theme.spacing(1),
+  flexWrap: 'wrap',
+  justifyContent: 'flex-end',
+  marginTop: theme.spacing(2),
+}));
+
 interface CartListProps {
   carts: Cart[];
   onUpdate: () => Promise<void>;
@@ -66,6 +76,8 @@ interface CartListProps {
 const CartList: React.FC<CartListProps> = ({ carts, onUpdate, onError }) => {
   const [editCart, setEditCart] = useState<Cart | null>(null);
   const [timeUpdateCart, setTimeUpdateCart] = useState<Cart | null>(null);
+  const [historyCart, setHistoryCart] = useState<Cart | null>(null);
+  const [returnCart, setReturnCart] = useState<Cart | null>(null);
 
   const getBatteryIcon = (level: number) => {
     if (level > 80) return <BatteryFull color="success" />;
@@ -126,23 +138,35 @@ const CartList: React.FC<CartListProps> = ({ carts, onUpdate, onError }) => {
                   </Box>
                 )}
 
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                <ActionButtons>
+                  {cart.status === 'in-use' && (
+                    <Tooltip title="Return Cart">
+                      <ActionButton onClick={() => setReturnCart(cart)}>
+                        <AssignmentReturn />
+                      </ActionButton>
+                    </Tooltip>
+                  )}
+                  <Tooltip title="View History">
+                    <ActionButton onClick={() => setHistoryCart(cart)}>
+                      <History />
+                    </ActionButton>
+                  </Tooltip>
                   <Tooltip title="Update Times">
-                    <ActionButton size="small" onClick={() => setTimeUpdateCart(cart)}>
+                    <ActionButton onClick={() => setTimeUpdateCart(cart)}>
                       <Timer />
                     </ActionButton>
                   </Tooltip>
                   <Tooltip title="Edit Cart">
-                    <ActionButton size="small" onClick={() => setEditCart(cart)}>
+                    <ActionButton onClick={() => setEditCart(cart)}>
                       <Edit />
                     </ActionButton>
                   </Tooltip>
                   <Tooltip title="Delete Cart">
-                    <ActionButton size="small" onClick={() => handleDelete(cart.id)}>
+                    <ActionButton onClick={() => handleDelete(cart.id)}>
                       <Delete />
                     </ActionButton>
                   </Tooltip>
-                </Box>
+                </ActionButtons>
               </CardContent>
             </StyledCard>
           </Grid>
@@ -153,7 +177,9 @@ const CartList: React.FC<CartListProps> = ({ carts, onUpdate, onError }) => {
         {editCart && (
           <CartForm
             cart={editCart}
-            onSubmit={onUpdate}
+            onSubmit={async () => {
+              await onUpdate();
+            }}
             onClose={() => setEditCart(null)}
             onError={onError}
           />
@@ -164,6 +190,21 @@ const CartList: React.FC<CartListProps> = ({ carts, onUpdate, onError }) => {
         open={!!timeUpdateCart}
         cart={timeUpdateCart}
         onClose={() => setTimeUpdateCart(null)}
+        onSubmit={onUpdate}
+        onError={onError}
+      />
+
+      <CartHistoryDialog
+        open={!!historyCart}
+        cart={historyCart}
+        onClose={() => setHistoryCart(null)}
+        onError={onError}
+      />
+
+      <CartReturnDialog
+        open={!!returnCart}
+        cart={returnCart}
+        onClose={() => setReturnCart(null)}
         onSubmit={onUpdate}
         onError={onError}
       />

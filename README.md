@@ -1,67 +1,75 @@
 # Cart Management System
 
-A system for managing golf carts, tracking their status, and handling rentals.
+A modern web application for managing golf cart rentals and staff assignments.
 
 ## Features
 
-- Cart management (create, update, delete, view)
-- Person management (players, volunteers, admins)
-- Cart status tracking (available, in-use, maintenance)
-- Battery level monitoring
-- Location tracking
-- Checkout/return time management
+### Cart Management
+- Create, edit, and delete golf carts
+- Bulk creation of multiple carts
+- Real-time battery level tracking
+- Automatic time management in Eastern Time
+- Status tracking (Available, In-Use, Maintenance)
 
-## Tech Stack
+### Staff Management
+- Manage staff members (volunteers and admins)
+- Assign up to 2 staff members per cart
+- Track staff assignments and cart usage
 
-- Frontend: React with TypeScript, Material-UI
-- Backend: Flask with Python
-- Database: MySQL
-- Containerization: Docker
+### Time Management
+- Automatic checkout time setting
+- Return time calculation (6 hours after checkout or end of day)
+- Editable return times for in-use carts
+- All times in Eastern Time zone
 
-## Setup
+### Dashboard
+- POS-style interface
+- Filter carts by status (Available, In-Use, Maintenance)
+- Quick status overview with counts
+- Interactive cart cards with detailed information
+- Dark/Light mode support
 
-1. Clone the repository
-2. Install Docker and Docker Compose
-3. Copy `.env.example` to `.env` and update the values
-4. Copy `.db_credentials.json.example` to `.db_credentials.json` and update the values
-4. Run `docker-compose up --build`
+## Technical Details
 
-## Development
-
-### Create and Start Venv
-
-### Frontend 
-```bash
-cd frontend
-npm install
-npm start
-```
+### Frontend
+- React with TypeScript
+- Material-UI for components
+- Real-time updates
+- Responsive design
+- Error handling with specific error messages
+- Form validation
 
 ### Backend
-```bash
-cd backend
-pip install -r requirements.txt
-flask run
-```
+- Flask Python server
+- SQLAlchemy ORM
+- MySQL database
+- Timezone handling with pytz
+- RESTful API endpoints
+- Error handling middleware
 
-### Database
+## Current Status
+The application is functional with:
+- Complete cart CRUD operations
+- Staff assignment system
+- Time management system
+- Status filtering
+- Theme switching
+- Error handling
+- Data validation
+- Cart usage history
 
-1. Create a MySQL database
-2. Update the DATABASE_URL in .env
-3. Run the SQL scripts in database/init.sql
+## Next Steps
+Potential improvements include:
+- Staff scheduling
+- Analytics dashboard
+- Export functionality
+- Mobile app version
 
-## API Endpoints
+## Setup Instructions
+(TODO: Add setup instructions here)
 
-### Carts
+## API Documentation
+(TODO: Add API documentation here)
 
-- GET /carts - List all carts
-- POST /carts - Create a new cart
-- PUT /carts/<id> - Update a cart
-- DELETE /carts/<id> - Delete a cart
-
-### Persons
-
-- GET /persons - List all persons
-- POST /persons - Create a new person
-- PUT /persons/<id> - Update a person
-- DELETE /persons/<id> - Delete a person
+## Contributing
+(TODO: Add contribution guidelines here)

@@ -29,6 +29,8 @@ import { RequestError, displayErrorMessage } from '../utils/errorHandling';
 import BatteryGauge from './BatteryGauge';
 import StaffAssignments from './StaffAssignments';
 import StaffAssignmentDialog from './StaffAssignmentDialog';
+import { AssignmentReturn } from '@mui/icons-material';
+import CartReturnDialog from './CartReturnDialog';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -45,9 +47,18 @@ const FormSection = styled(Box)(({ theme }) => ({
   marginBottom: theme.spacing(3),
 }));
 
+const ActionButtons = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  gap: theme.spacing(2),
+  justifyContent: 'flex-end',
+  '& .MuiButton-root': {
+    minWidth: '120px', // Ensure consistent button widths
+  },
+}));
+
 interface CartFormProps {
   cart?: Cart;
-  onSubmit: () => void;
+  onSubmit: () => Promise<void>;
   onClose: () => void;
   onError: (message: string) => void;
 }
@@ -83,6 +94,7 @@ const CartForm: React.FC<CartFormProps> = ({
 
   const [showStaffDialog, setShowStaffDialog] = useState(false);
   const [errors, setErrors] = useState<ValidationErrors>({});
+  const [showReturnDialog, setShowReturnDialog] = useState(false);
 
   const setCartTimes = () => {
     const now = new Date();
@@ -379,22 +391,27 @@ const CartForm: React.FC<CartFormProps> = ({
             )}
           </StyledPaper>
         </StyledDialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button 
-            onClick={onClose}
-            variant="outlined"
-            sx={{ borderRadius: 2 }}
-          >
-            Cancel
-          </Button>
-          <Button 
-            type="submit" 
-            variant="contained" 
-            color="primary"
-            sx={{ borderRadius: 2 }}
-          >
-            {cart ? 'Update Cart' : 'Create Cart'}
-          </Button>
+        <DialogActions sx={{ p: 3, display: 'flex', gap: 2 }}>
+          <Box sx={{ flex: 1 }}>
+            {cart?.status === 'in-use' && (
+              <Button
+                onClick={() => setShowReturnDialog(true)}
+                variant="outlined"
+                color="primary"
+                startIcon={<AssignmentReturn />}
+              >
+                Return Cart
+              </Button>
+            )}
+          </Box>
+          <ActionButtons>
+            <Button onClick={onClose} variant="outlined">
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained" color="primary">
+              {cart ? 'Update Cart' : 'Create Cart'}
+            </Button>
+          </ActionButtons>
         </DialogActions>
       </form>
 
@@ -402,6 +419,16 @@ const CartForm: React.FC<CartFormProps> = ({
         open={showStaffDialog}
         onClose={() => setShowStaffDialog(false)}
         onAssign={handleStaffAssign}
+        onError={onError}
+      />
+
+      <CartReturnDialog
+        open={showReturnDialog}
+        cart={cart || null}
+        onClose={() => setShowReturnDialog(false)}
+        onSubmit={async () => {
+          await onSubmit();
+        }}
         onError={onError}
       />
     </>
