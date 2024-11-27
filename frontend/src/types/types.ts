@@ -5,7 +5,7 @@
  * @description Core type definitions for the application
  */
 
-import { Role } from './roles';
+import { CartStatus } from './cartStatus';
 
 /**
  * Cart entity interface
@@ -13,11 +13,11 @@ import { Role } from './roles';
 export interface Cart {
     id: number;
     cart_number: string;
-    status: 'available' | 'in-use' | 'maintenance';
+    status: CartStatus;
     battery_level: number;
-    checkout_time: string | null | undefined;
-    return_by_time: string | null | undefined;
-    assigned_to_id?: number | null;
+    checkout_time: string | null;
+    return_by_time: string | null;
+    assigned_to: Person[];
 }
 
 /**
@@ -26,10 +26,10 @@ export interface Cart {
 export interface Person {
     id: number;
     name: string;
-    role: Role;
+    role: 'admin' | 'volunteer';
     phone: string;
     email: string;
-    active_cart: Cart[];
+    assigned_carts: Cart[];
 }
 
 /**

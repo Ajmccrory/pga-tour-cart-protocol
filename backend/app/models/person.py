@@ -11,7 +11,6 @@ class Person(db.Model):
         role (str): Role in the system (admin, volunteer)
         phone (str): Contact phone number
         email (str): Contact email address
-        active_cart (relationship): Currently assigned cart(s)
     """
     
     id = db.Column(db.Integer, primary_key=True)
@@ -19,42 +18,51 @@ class Person(db.Model):
     role = db.Column(db.String(20), nullable=False)
     phone = db.Column(db.String(20))
     email = db.Column(db.String(120))
-    active_cart = db.relationship('Cart', backref='assigned_to', lazy=True)
-    
+
     @staticmethod
-    def validate_email(email):
-        """Validates email format"""
+    def validate_name(name: str) -> bool:
+        """Validate person name"""
+        if not name or len(name.strip()) < 2:
+            return False
+        return bool(re.match(r'^[A-Za-z\s\'-]+$', name))
+
+    @staticmethod
+    def validate_email(email: str) -> bool:
+        """Validate email format"""
         if not email:
             return True  # Email is optional
-        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        return bool(re.match(pattern, email))
-    
+        return bool(re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email))
+
     @staticmethod
-    def validate_phone(phone):
-        """Validates phone number format"""
+    def validate_phone(phone: str) -> bool:
+        """Validate phone number format"""
         if not phone:
             return True  # Phone is optional
-        pattern = r'^\+?1?\d{9,15}$'
-        return bool(re.match(pattern, phone))
-    
+        return bool(re.match(r'^\+?1?\d{10,15}$', phone))
+
     @staticmethod
-    def validate_name(name):
-        """Validates that the full name is unique"""
-        existing_person = Person.query.filter_by(name=name).first()
-        return existing_person is None
-    
-    def to_dict(self):
+    def validate_role(role: str) -> bool:
+        """Validate role"""
+        return role in ['admin', 'volunteer']
+
+    def to_dict(self, include_relationships=True):
         """
         Converts person object to dictionary for JSON serialization.
-        
-        Returns:
-            dict: Dictionary representation of the person
+        Args:
+            include_relationships: Whether to include nested relationships
         """
-        return {
+        result = {
             'id': self.id,
             'name': self.name,
             'role': self.role,
             'phone': self.phone,
             'email': self.email,
-            'active_cart': [cart.to_dict() for cart in self.active_cart]
-        } 
+        }
+        
+        if include_relationships:
+            result['assigned_carts'] = [cart.to_dict(include_relationships=False) for cart in self.assigned_carts]
+            
+        return result
+
+    def __repr__(self):
+        return f'<Person {self.name}>'

@@ -17,9 +17,12 @@ import {
   styled,
   Tooltip,
   Chip,
+  List,
+  ListItem,
+  ListItemText,
 } from '@mui/material';
 import { Edit, Delete, Email, Phone, Badge } from '@mui/icons-material';
-import { Person } from '../types/types';
+import { Person, Cart } from '../types/types';
 import PersonForm from './PersonForm';
 import { api } from '../utils/api';
 import { displayErrorMessage } from '../utils/errorHandling';
@@ -85,67 +88,56 @@ const PersonList: React.FC<PersonListProps> = ({ persons, onUpdate, onError }) =
 
   return (
     <>
-      <Grid container spacing={3}>
+      <List>
         {persons.map((person) => (
-          <Grid item xs={12} sm={6} md={4} key={person.id}>
-            <StyledCard>
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="h6">
-                    {person.name}
+          <ListItem
+            key={person.id}
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: 2,
+            }}
+          >
+            <ListItemText
+              primary={person.name}
+              secondary={
+                <>
+                  <Typography component="span" variant="body2">
+                    Role: {ROLE_LABELS[person.role]}<br />
+                    Email: {person.email}<br />
+                    Phone: {person.phone}
                   </Typography>
-                  <RoleChip
-                    label={ROLE_LABELS[person.role]}
-                    role={person.role}
-                    size="small"
-                    icon={<Badge />}
-                  />
-                </Box>
-
-                <ContactInfo>
-                  <Email fontSize="small" />
-                  <Typography variant="body2">
-                    {person.email || 'No email provided'}
-                  </Typography>
-                </ContactInfo>
-
-                <ContactInfo>
-                  <Phone fontSize="small" />
-                  <Typography variant="body2">
-                    {person.phone || 'No phone provided'}
-                  </Typography>
-                </ContactInfo>
-
-                {person.active_cart.length > 0 && (
-                  <Box sx={{ mt: 2, mb: 2 }}>
-                    <Typography variant="subtitle2" color="primary">
-                      Active Carts:
-                    </Typography>
-                    {person.active_cart.map((cart) => (
-                      <Typography key={cart.id} variant="body2" color="text.secondary">
-                        Cart #{cart.cart_number}
+                  {person.assigned_carts.length > 0 && (
+                    <Box sx={{ mt: 2, mb: 2 }}>
+                      <Typography variant="subtitle2" color="primary">
+                        Assigned Carts:
                       </Typography>
-                    ))}
-                  </Box>
-                )}
-
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                  <Tooltip title="Edit Staff Member">
-                    <ActionButton size="small" onClick={() => setEditPerson(person)}>
-                      <Edit />
-                    </ActionButton>
-                  </Tooltip>
-                  <Tooltip title="Delete Staff Member">
-                    <ActionButton size="small" onClick={() => handleDelete(person.id)}>
-                      <Delete />
-                    </ActionButton>
-                  </Tooltip>
-                </Box>
-              </CardContent>
-            </StyledCard>
-          </Grid>
+                      {person.assigned_carts.map((cart: Cart) => (
+                        <Typography key={cart.id} variant="body2" color="text.secondary">
+                          Cart #{cart.cart_number}
+                        </Typography>
+                      ))}
+                    </Box>
+                  )}
+                </>
+              }
+            />
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+              <Tooltip title="Edit Staff Member">
+                <ActionButton size="small" onClick={() => setEditPerson(person)}>
+                  <Edit />
+                </ActionButton>
+              </Tooltip>
+              <Tooltip title="Delete Staff Member">
+                <ActionButton size="small" onClick={() => handleDelete(person.id)}>
+                  <Delete />
+                </ActionButton>
+              </Tooltip>
+            </Box>
+          </ListItem>
         ))}
-      </Grid>
+      </List>
 
       <Dialog open={!!editPerson} onClose={() => setEditPerson(null)}>
         {editPerson && (
