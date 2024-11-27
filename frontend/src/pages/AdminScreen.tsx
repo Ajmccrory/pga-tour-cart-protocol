@@ -13,7 +13,6 @@ import {
     Button,
     Dialog,
     Box,
-    styled,
 } from '@mui/material';
 import { Cart, Person } from '../types/types';
 import CartList from '../components/CartList';
@@ -23,9 +22,7 @@ import PersonForm from '../components/PersonForm';
 import Dashboard from '../components/Dashboard';
 import { api } from '../utils/api';
 import { displayErrorMessage } from '../utils/errorHandling';
-import { Add as AddIcon, DeleteSweep as DeleteSweepIcon } from '@mui/icons-material';
-import BulkCartForm from '../components/BulkCartForm';
-import BulkDeleteDialog from '../components/BulkDeleteDialog';
+import { Add } from '@mui/icons-material';
 
 interface AdminScreenProps {
   onError: (message: string) => void;
@@ -36,12 +33,11 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onError }) => {
     const [persons, setPersons] = useState<Person[]>([]);
     const [openCartDialog, setOpenCartDialog] = useState(false);
     const [openBulkCartDialog, setOpenBulkCartDialog] = useState(false);
-    const [openBulkDeleteDialog, setOpenBulkDeleteDialog] = useState(false);
     const [openPersonDialog, setOpenPersonDialog] = useState(false);
     const [loading, setLoading] = useState(true);
     const [dashboardError, setDashboardError] = useState<string | null>(null);
 
-    const fetchData = async () => {
+    const fetchData = React.useCallback(async () => {
         setLoading(true);
         try {
             const [cartsData, personsData] = await Promise.all([
@@ -58,20 +54,11 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onError }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [onError]);
 
     useEffect(() => {
         fetchData();
-    }, []);
-
-    const handleBulkDelete = async () => {
-        try {
-            await api.deleteAllCarts();
-            await fetchData();
-        } catch (error) {
-            onError(displayErrorMessage(error));
-        }
-    };
+    }, [fetchData]);
 
     return (
         <Box sx={{ p: 3 }}>
@@ -87,66 +74,55 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onError }) => {
                 </Grid>
                 
                 <Grid item xs={12} md={6}>
-                    <Paper sx={{ p: 2 }}>
-                        <Box sx={{ 
-                            display: 'flex', 
-                            justifyContent: 'space-between', 
-                            alignItems: 'center', 
-                            mb: 3 
-                        }}>
+                    <Paper sx={{ p: 2, height: '100%' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                             <Typography variant="h6">Carts</Typography>
                             <Box sx={{ display: 'flex', gap: 1 }}>
                                 <Button
                                     variant="contained"
                                     onClick={() => setOpenBulkCartDialog(true)}
-                                    startIcon={<AddIcon />}
+                                    startIcon={<Add />}
                                 >
                                     Bulk Create
                                 </Button>
                                 <Button
                                     variant="contained"
                                     onClick={() => setOpenCartDialog(true)}
-                                    startIcon={<AddIcon />}
+                                    startIcon={<Add />}
                                 >
                                     Add Cart
                                 </Button>
-                                {carts.length > 0 && (
-                                    <Button
-                                        variant="outlined"
-                                        color="error"
-                                        onClick={() => setOpenBulkDeleteDialog(true)}
-                                        startIcon={<DeleteSweepIcon />}
-                                    >
-                                        Delete All
-                                    </Button>
-                                )}
                             </Box>
                         </Box>
-                        <CartList 
-                            carts={carts} 
-                            onUpdate={fetchData}
-                            onError={onError}
-                        />
+                        <Box sx={{ overflowY: 'auto', maxHeight: 'calc(100vh - 300px)' }}>
+                            <CartList 
+                                carts={carts} 
+                                onUpdate={fetchData}
+                                onError={onError}
+                            />
+                        </Box>
                     </Paper>
                 </Grid>
 
                 <Grid item xs={12} md={6}>
-                    <Paper sx={{ p: 2 }}>
+                    <Paper sx={{ p: 2, height: '100%' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                             <Typography variant="h6">Staff</Typography>
                             <Button 
                                 variant="contained" 
                                 onClick={() => setOpenPersonDialog(true)}
-                                startIcon={<AddIcon />}
+                                startIcon={<Add />}
                             >
                                 Add Staff
                             </Button>
                         </Box>
-                        <PersonList 
-                            persons={persons} 
-                            onUpdate={fetchData}
-                            onError={onError}
-                        />
+                        <Box sx={{ overflowY: 'auto', maxHeight: 'calc(100vh - 300px)' }}>
+                            <PersonList 
+                                persons={persons} 
+                                onUpdate={fetchData}
+                                onError={onError}
+                            />
+                        </Box>
                     </Paper>
                 </Grid>
             </Grid>
@@ -166,21 +142,6 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onError }) => {
                     onError={onError}
                 />
             </Dialog>
-
-            <Dialog open={openBulkCartDialog} onClose={() => setOpenBulkCartDialog(false)}>
-                <BulkCartForm
-                    onSubmit={fetchData}
-                    onClose={() => setOpenBulkCartDialog(false)}
-                    onError={onError}
-                />
-            </Dialog>
-
-            <BulkDeleteDialog
-                open={openBulkDeleteDialog}
-                cartCount={carts.length}
-                onClose={() => setOpenBulkDeleteDialog(false)}
-                onConfirm={handleBulkDelete}
-            />
         </Box>
     );
 };

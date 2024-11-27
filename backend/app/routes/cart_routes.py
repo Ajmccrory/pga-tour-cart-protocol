@@ -8,6 +8,7 @@ Description: API endpoints for cart management
 from flask import Blueprint, jsonify, request
 from app.models.cart import Cart, cart_assignments
 from app.models.person import Person
+from app.models.cart_history import CartHistory
 from app import db
 from datetime import datetime, timedelta
 from app.utils.error_handlers import APIError
@@ -236,4 +237,55 @@ def unassign_person_from_cart(cart_id, person_id):
         raise
     except Exception as e:
         db.session.rollback()
-        raise APIError(f'Failed to unassign person from cart: {str(e)}', 500) 
+        raise APIError(f'Failed to unassign person from cart: {str(e)}', 500)
+
+@bp.route('/carts/<int:cart_id>/return', methods=['POST'])
+def return_cart(cart_id):
+    """Process a cart return"""
+    try:
+        cart = Cart.query.get_or_404(cart_id)
+        data = request.get_json()
+
+        if not data:
+            raise APIError('No data provided', 400)
+
+        # Find the active history entry for this cart
+        active_history = CartHistory.query.filter_by(
+            cart_id=cart.id,
+            return_time=None
+        ).first()
+
+        if not active_history:
+            # Create a new history entry if none exists
+            active_history = CartHistory(
+                cart_id=cart.id,
+                person_id=cart.assigned_to[0].id if cart.assigned_to else None,
+                checkout_time=cart.checkout_time,
+                expected_return_time=cart.return_by_time,
+                battery_level_start=cart.battery_level
+            )
+            db.session.add(active_history)
+
+        # Update the history entry with return information
+        active_history.return_time = Cart.parse_datetime(data.get('return_time'))
+        active_history.battery_level_end = data.get('battery_level')
+        active_history.notes = data.get('notes')
+
+        # Update cart status and battery level
+        cart.status = 'available'
+        cart.battery_level = data.get('battery_level', cart.battery_level)
+        cart.checkout_time = None
+        cart.return_by_time = None
+
+        # Clear staff assignments
+        cart.assigned_to = []
+
+        db.session.commit()
+        return jsonify(cart.to_dict())
+
+    except APIError:
+        db.session.rollback()
+        raise
+    except Exception as e:
+        db.session.rollback()
+        raise APIError(f'Failed to process cart return: {str(e)}', 500) 

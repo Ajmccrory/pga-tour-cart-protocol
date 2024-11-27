@@ -42,13 +42,7 @@ const StaffAssignmentDialog: React.FC<StaffAssignmentDialogProps> = ({
   const [showNewStaffForm, setShowNewStaffForm] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (open) {
-      fetchStaff();
-    }
-  }, [open]);
-
-  const fetchStaff = async () => {
+  const fetchStaff = React.useCallback(async () => {
     try {
       setLoading(true);
       const data = await api.getPersons();
@@ -58,7 +52,13 @@ const StaffAssignmentDialog: React.FC<StaffAssignmentDialogProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [onError]);
+
+  useEffect(() => {
+    if (open) {
+      fetchStaff();
+    }
+  }, [open, fetchStaff]);
 
   const handleAssign = () => {
     if (selectedStaffId !== '') {
