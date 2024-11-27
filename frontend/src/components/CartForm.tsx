@@ -20,12 +20,15 @@ import {
   Box,
   styled,
   Paper,
+  Typography,
 } from '@mui/material';
 import { Cart } from '../types/types';
 import { api } from '../utils/api';
 import { CartStatus, CART_STATUS_LABELS } from '../types/cartStatus';
-import { RequestError } from '../utils/errorHandling';
+import { RequestError, displayErrorMessage } from '../utils/errorHandling';
 import BatteryGauge from './BatteryGauge';
+import StaffAssignments from './StaffAssignments';
+import StaffAssignmentDialog from './StaffAssignmentDialog';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -74,9 +77,11 @@ const CartForm: React.FC<CartFormProps> = ({
       battery_level: 100,
       checkout_time: null,
       return_by_time: null,
+      assigned_to: []
     };
   });
 
+  const [showStaffDialog, setShowStaffDialog] = useState(false);
   const [errors, setErrors] = useState<ValidationErrors>({});
 
   const setCartTimes = () => {
@@ -140,14 +145,52 @@ const CartForm: React.FC<CartFormProps> = ({
     return isValid;
   };
 
+  const isInUse = (status: CartStatus): status is 'in-use' => status === 'in-use';
+
   const handleStatusChange = (newStatus: CartStatus) => {
-    const times = newStatus === 'in-use' ? setCartTimes() : { checkout_time: null, return_by_time: null };
+    if (isInUse(newStatus)) {
+      // Show staff assignment dialog first
+      setShowStaffDialog(true);
+      // Don't update status until staff is assigned
+      return;
+    }
+
+    const times = isInUse(newStatus)
+      ? setCartTimes() 
+      : { checkout_time: null, return_by_time: null };
     
     setFormData({
       ...formData,
       status: newStatus,
-      ...times
+      ...times,
+      assigned_to: isInUse(newStatus) ? formData.assigned_to : []
     });
+  };
+
+  const handleStaffAssign = async (personId: number) => {
+    try {
+      // Fetch the person's details after assignment
+      const person = await api.getPerson(personId);
+      const times = setCartTimes();
+      
+      // Update form data with staff assignment
+      setFormData({
+        ...formData,
+        status: 'in-use',
+        assigned_to: [...(formData.assigned_to || []), person],
+        checkout_time: times.checkout_time,
+        return_by_time: times.return_by_time
+      });
+
+      // If we have a cart ID, immediately update the assignment
+      if (cart?.id) {
+        await api.assignPersonToCart(cart.id, personId);
+      }
+
+      setShowStaffDialog(false);
+    } catch (error) {
+      onError(displayErrorMessage(error));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -158,21 +201,39 @@ const CartForm: React.FC<CartFormProps> = ({
       return;
     }
 
+    // Require staff assignment for in-use carts
+    if (formData.status === 'in-use' && (!formData.assigned_to || formData.assigned_to.length === 0)) {
+      setShowStaffDialog(true);
+      return;
+    }
+
     try {
-      const submissionData = { ...formData };
+      // Create API submission data
+      const submissionData = {
+        ...formData,
+      };
       
-      // If status is in-use, set times right before submission
       if (submissionData.status === 'in-use') {
         const times = setCartTimes();
         submissionData.checkout_time = times.checkout_time;
         submissionData.return_by_time = times.return_by_time;
       }
 
+      let updatedCart: Cart | null = null;
       if (cart) {
-        await api.updateCart(cart.id, submissionData);
+        updatedCart = await api.updateCart(cart.id, submissionData);
       } else {
-        await api.createCart(submissionData);
+        updatedCart = await api.createCart(submissionData);
+        // If we have assigned staff and this is a new cart, assign them after creation
+        if (formData.assigned_to?.length && updatedCart?.id) {
+          await Promise.all(
+            formData.assigned_to.map(person => 
+              api.assignPersonToCart(updatedCart!.id, person.id)
+            )
+          );
+        }
       }
+
       onSubmit();
       onClose();
     } catch (error) {
@@ -194,132 +255,156 @@ const CartForm: React.FC<CartFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <DialogTitle sx={{ pb: 0 }}>
-        {cart ? 'Edit Cart' : 'New Cart'}
-      </DialogTitle>
-      <StyledDialogContent>
-        {errors.general && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {errors.general}
-          </Alert>
-        )}
+    <>
+      <form onSubmit={handleSubmit}>
+        <DialogTitle sx={{ pb: 0 }}>
+          {cart ? 'Edit Cart' : 'New Cart'}
+        </DialogTitle>
+        <StyledDialogContent>
+          {errors.general && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {errors.general}
+            </Alert>
+          )}
 
-        <StyledPaper>
-          <FormSection>
-            <TextField
-              fullWidth
-              label="Cart Number"
-              value={formData.cart_number}
-              onChange={(e) => setFormData({ ...formData, cart_number: e.target.value })}
-              required
-              error={!!errors.cart_number}
-              helperText={errors.cart_number || 'Use letters, numbers, and hyphens only'}
-              sx={{ mb: 2 }}
-            />
-
-            <FormControl fullWidth required sx={{ mb: 2 }}>
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={formData.status}
-                onChange={(e) => handleStatusChange(e.target.value as CartStatus)}
-                sx={{
-                  '& .MuiSelect-select': {
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                  },
-                }}
-              >
-                {Object.entries(CART_STATUS_LABELS).map(([value, label]) => (
-                  <MenuItem 
-                    key={value} 
-                    value={value}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 12,
-                        height: 12,
-                        borderRadius: '50%',
-                        bgcolor: value === 'available' ? '#4caf50' : 
-                                value === 'in-use' ? '#2196f3' : '#f44336',
-                      }}
-                    />
-                    {label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <Box sx={{ mb: 2 }}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Battery Level"
-                value={formData.battery_level}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  battery_level: parseInt(e.target.value)
-                })}
-                required
-                error={!!errors.battery_level}
-                helperText={errors.battery_level || 'Enter a value between 0 and 100'}
-                inputProps={{ min: 0, max: 100 }}
-              />
-              <Box sx={{ mt: 1 }}>
-                <BatteryGauge level={formData.battery_level || 0} />
-              </Box>
-            </Box>
-          </FormSection>
-
-          {formData.status === 'in-use' && (
+          <StyledPaper>
             <FormSection>
               <TextField
                 fullWidth
-                type="datetime-local"
-                label="Checkout Time"
-                value={formData.checkout_time || ''}
-                disabled
-                InputLabelProps={{ shrink: true }}
+                label="Cart Number"
+                value={formData.cart_number}
+                onChange={(e) => setFormData({ ...formData, cart_number: e.target.value })}
+                required
+                error={!!errors.cart_number}
+                helperText={errors.cart_number || 'Use letters, numbers, and hyphens only'}
                 sx={{ mb: 2 }}
               />
 
-              <TextField
-                fullWidth
-                type="datetime-local"
-                label="Return By"
-                value={formData.return_by_time || ''}
-                disabled
-                InputLabelProps={{ shrink: true }}
-                helperText="Return time is automatically set to 6 hours after checkout"
-              />
+              <FormControl fullWidth required sx={{ mb: 2 }}>
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={formData.status}
+                  onChange={(e) => handleStatusChange(e.target.value as CartStatus)}
+                  sx={{
+                    '& .MuiSelect-select': {
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                    },
+                  }}
+                >
+                  {Object.entries(CART_STATUS_LABELS).map(([value, label]) => (
+                    <MenuItem 
+                      key={value} 
+                      value={value}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 12,
+                          height: 12,
+                          borderRadius: '50%',
+                          bgcolor: value === 'available' ? '#4caf50' : 
+                                  value === 'in-use' ? '#2196f3' : '#f44336',
+                        }}
+                      />
+                      {label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <Box sx={{ mb: 2 }}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Battery Level"
+                  value={formData.battery_level}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    battery_level: parseInt(e.target.value)
+                  })}
+                  required
+                  error={!!errors.battery_level}
+                  helperText={errors.battery_level || 'Enter a value between 0 and 100'}
+                  inputProps={{ min: 0, max: 100 }}
+                />
+                <Box sx={{ mt: 1 }}>
+                  <BatteryGauge level={formData.battery_level || 0} />
+                </Box>
+              </Box>
             </FormSection>
-          )}
-        </StyledPaper>
-      </StyledDialogContent>
-      <DialogActions sx={{ p: 3 }}>
-        <Button 
-          onClick={onClose}
-          variant="outlined"
-          sx={{ borderRadius: 2 }}
-        >
-          Cancel
-        </Button>
-        <Button 
-          type="submit" 
-          variant="contained" 
-          color="primary"
-          sx={{ borderRadius: 2 }}
-        >
-          {cart ? 'Update Cart' : 'Create Cart'}
-        </Button>
-      </DialogActions>
-    </form>
+
+            {formData.status === 'in-use' && (
+              <FormSection>
+                <TextField
+                  fullWidth
+                  type="datetime-local"
+                  label="Checkout Time"
+                  value={formData.checkout_time || ''}
+                  disabled
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ mb: 2 }}
+                />
+
+                <TextField
+                  fullWidth
+                  type="datetime-local"
+                  label="Return By"
+                  value={formData.return_by_time || ''}
+                  disabled
+                  InputLabelProps={{ shrink: true }}
+                  helperText="Return time is automatically set to 6 hours after checkout"
+                />
+
+                <Box sx={{ mt: 2 }}>
+                  <StaffAssignments
+                    assignedStaff={formData.assigned_to || []}
+                    onAssign={() => setShowStaffDialog(true)}
+                    onUnassign={async (personId) => {
+                      try {
+                        await api.unassignPersonFromCart(cart?.id || 0, personId);
+                        await onSubmit();
+                      } catch (error) {
+                        onError(displayErrorMessage(error));
+                      }
+                    }}
+                  />
+                </Box>
+              </FormSection>
+            )}
+          </StyledPaper>
+        </StyledDialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button 
+            onClick={onClose}
+            variant="outlined"
+            sx={{ borderRadius: 2 }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            type="submit" 
+            variant="contained" 
+            color="primary"
+            sx={{ borderRadius: 2 }}
+          >
+            {cart ? 'Update Cart' : 'Create Cart'}
+          </Button>
+        </DialogActions>
+      </form>
+
+      <StaffAssignmentDialog
+        open={showStaffDialog}
+        onClose={() => setShowStaffDialog(false)}
+        onAssign={handleStaffAssign}
+        onError={onError}
+      />
+    </>
   );
 };
 

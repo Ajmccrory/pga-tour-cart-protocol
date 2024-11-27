@@ -5,7 +5,7 @@
  * @description Form for creating and editing staff members
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   DialogTitle,
   DialogContent,
@@ -53,6 +53,7 @@ const IconWrapper = styled(Box)(({ theme }) => ({
 
 interface PersonFormProps {
   person?: Person;
+  defaultRole?: Role;
   onSubmit: () => void;
   onClose: () => void;
   onError: (message: string) => void;
@@ -67,18 +68,32 @@ interface ValidationErrors {
 
 const PersonForm: React.FC<PersonFormProps> = ({
   person,
+  defaultRole = 'volunteer',
   onSubmit,
   onClose,
   onError,
 }) => {
-  const [formData, setFormData] = useState<Partial<Person>>(
-    person || {
+  const [formData, setFormData] = useState<Partial<Person>>(() => {
+    if (person) {
+      return person;
+    }
+    
+    return {
       name: '',
-      role: 'volunteer',
+      role: defaultRole,
       phone: '',
       email: '',
+    };
+  });
+
+  useEffect(() => {
+    if (!person) {
+      setFormData(prev => ({
+        ...prev,
+        role: defaultRole,
+      }));
     }
-  );
+  }, [defaultRole, person]);
 
   const [errors, setErrors] = useState<ValidationErrors>({});
 

@@ -22,7 +22,6 @@ class Config:
         SECRET_KEY (str): Application secret key for security
     """
     
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'mysql://user:password@localhost/cart_management'
+    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://root:Abcjk7869^$@localhost/cart_management'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-key-do-not-use-in-production'

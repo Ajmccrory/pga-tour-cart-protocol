@@ -1,8 +1,8 @@
 /**
- * Cart Management System - Time Update Dialog Component
+ * Cart Management System - Time Update Dialog
  * @author AJ McCrory
  * @created 2024
- * @description Dialog for updating cart checkout and return times
+ * @description Dialog for updating cart return times
  */
 
 import React, { useState, useEffect } from 'react';
@@ -16,7 +16,6 @@ import {
   Alert,
   Box,
   styled,
-  Paper,
   Typography,
 } from '@mui/material';
 import { Cart } from '../types/types';
@@ -24,15 +23,11 @@ import { api } from '../utils/api';
 import { RequestError } from '../utils/errorHandling';
 import { AccessTime, EventAvailable } from '@mui/icons-material';
 
-const StyledPaper = styled(Paper)(({ theme }) => ({
+const StyledPaper = styled(Box)(({ theme }) => ({
   padding: theme.spacing(3),
   borderRadius: theme.spacing(2),
-  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-}));
-
-const StyledDialogContent = styled(DialogContent)(({ theme }) => ({
-  minWidth: '500px',
-  padding: theme.spacing(3),
+  backgroundColor: theme.palette.background.paper,
+  boxShadow: theme.shadows[1],
 }));
 
 const TimeField = styled(Box)(({ theme }) => ({
@@ -47,9 +42,6 @@ const IconWrapper = styled(Box)(({ theme }) => ({
   borderRadius: theme.spacing(1),
   backgroundColor: theme.palette.primary.light,
   color: theme.palette.primary.contrastText,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
 }));
 
 interface TimeUpdateDialogProps {
@@ -72,68 +64,44 @@ const TimeUpdateDialog: React.FC<TimeUpdateDialogProps> = ({
   onSubmit,
   onError,
 }) => {
-  const [returnTime, setReturnTime] = useState<string>(() => {
-    const now = new Date();
-    const sixHoursLater = new Date(now.getTime() + (6 * 60 * 60 * 1000));
-    return sixHoursLater.toISOString().slice(0, 16);
-  });
+  const [returnTime, setReturnTime] = useState<string>('');
   const [errors, setErrors] = useState<ValidationErrors>({});
 
   useEffect(() => {
-    if (open) {
-      const now = new Date();
-      const sixHoursLater = new Date(now.getTime() + (6 * 60 * 60 * 1000));
-      setReturnTime(sixHoursLater.toISOString().slice(0, 16));
-      setErrors({}); // Clear any previous errors
+    if (open && cart) {
+      // Use existing return time if available, otherwise calculate new one
+      if (cart.return_by_time) {
+        setReturnTime(cart.return_by_time.slice(0, 16));
+      }
     }
-  }, [open]);
+  }, [open, cart]);
 
   const validateTimes = (): boolean => {
     const newErrors: ValidationErrors = {};
     let isValid = true;
 
-    const now = new Date();
-    const returnBy = new Date(returnTime);
-    const minReturnTime = new Date(now.getTime() + 30 * 60000); // 30 minutes after now
-    const maxReturnTime = new Date(now.getTime() + 24 * 60 * 60000); // 24 hours after now
-
     if (!returnTime) {
       newErrors.return_by_time = 'Return time is required';
       isValid = false;
-    } else if (returnBy <= now) {
-      newErrors.return_by_time = 'Return time must be after current time';
-      isValid = false;
-    } else if (returnBy < minReturnTime) {
-      newErrors.return_by_time = 'Return time must be at least 30 minutes from now';
-      isValid = false;
-    } else if (returnBy > maxReturnTime) {
-      newErrors.return_by_time = 'Return time cannot be more than 24 hours from now';
-      isValid = false;
+    } else {
+      const returnDate = new Date(returnTime);
+      const checkoutDate = new Date(cart?.checkout_time || '');
+
+      // Return time must be on the same day as checkout
+      if (returnDate.toDateString() !== checkoutDate.toDateString()) {
+        newErrors.return_by_time = 'Return time must be on the same day as checkout';
+        isValid = false;
+      }
+
+      // Return time must be after checkout time
+      if (returnDate <= checkoutDate) {
+        newErrors.return_by_time = 'Return time must be after checkout time';
+        isValid = false;
+      }
     }
 
     setErrors(newErrors);
     return isValid;
-  };
-
-  const formatLocalDateTime = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
-
-  const getCurrentTimeString = () => {
-    const now = new Date();
-    return now.toLocaleString(undefined, {
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
   };
 
   const handleSubmit = async () => {
@@ -148,13 +116,9 @@ const TimeUpdateDialog: React.FC<TimeUpdateDialogProps> = ({
         throw new Error('No cart selected');
       }
 
-      const now = new Date();
-      
       await api.updateCart(cart.id, {
         ...cart,
-        status: 'in-use',
-        checkout_time: now.toISOString(),
-        return_by_time: new Date(returnTime).toISOString(),
+        return_by_time: returnTime,
       });
 
       await onSubmit();
@@ -173,8 +137,8 @@ const TimeUpdateDialog: React.FC<TimeUpdateDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose}>
-      <DialogTitle>Update Cart Times</DialogTitle>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Update Return Time</DialogTitle>
       <DialogContent>
         {errors.general && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -192,7 +156,7 @@ const TimeUpdateDialog: React.FC<TimeUpdateDialogProps> = ({
                 Checkout Time
               </Typography>
               <Typography variant="body1">
-                {getCurrentTimeString()}
+                {cart?.checkout_time ? new Date(cart.checkout_time).toLocaleString() : 'Not set'}
               </Typography>
             </Box>
           </TimeField>
@@ -212,7 +176,7 @@ const TimeUpdateDialog: React.FC<TimeUpdateDialogProps> = ({
                 onChange={(e) => setReturnTime(e.target.value)}
                 required
                 error={!!errors.return_by_time}
-                helperText={errors.return_by_time}
+                helperText={errors.return_by_time || 'Must be on the same day as checkout'}
                 InputLabelProps={{ shrink: true }}
               />
             </Box>
@@ -222,7 +186,7 @@ const TimeUpdateDialog: React.FC<TimeUpdateDialogProps> = ({
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button onClick={handleSubmit} variant="contained" color="primary">
-          Update Times
+          Update Return Time
         </Button>
       </DialogActions>
     </Dialog>

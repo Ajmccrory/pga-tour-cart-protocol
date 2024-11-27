@@ -2,13 +2,8 @@
  * Cart Management System - Error Handling Utilities
  * @author AJ McCrory
  * @created 2024
- * @description Standardized error handling and formatting
+ * @description Utilities for handling and displaying errors
  */
-
-export interface APIError {
-  message: string;
-  status_code: number;
-}
 
 export class RequestError extends Error {
   status_code: number;
@@ -20,12 +15,25 @@ export class RequestError extends Error {
   }
 }
 
+export const displayErrorMessage = (error: unknown): string => {
+  if (error instanceof RequestError) {
+    return error.message;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'An unexpected error occurred';
+};
+
 export const handleApiError = async (response: Response) => {
   if (!response.ok) {
-    let errorData: APIError;
+    let errorData;
     try {
       errorData = await response.json();
-      throw new RequestError(errorData.message, errorData.status_code);
+      throw new RequestError(
+        errorData.message || 'An unexpected error occurred',
+        response.status
+      );
     } catch (error) {
       if (error instanceof RequestError) {
         throw error;
@@ -37,14 +45,4 @@ export const handleApiError = async (response: Response) => {
     }
   }
   return response;
-};
-
-export const displayErrorMessage = (error: unknown): string => {
-  if (error instanceof RequestError) {
-    return error.message;
-  }
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return 'An unexpected error occurred';
 }; 
