@@ -61,7 +61,6 @@ interface TimeUpdateDialogProps {
 }
 
 interface ValidationErrors {
-  checkout_time?: string;
   return_by_time?: string;
   general?: string;
 }
@@ -73,43 +72,68 @@ const TimeUpdateDialog: React.FC<TimeUpdateDialogProps> = ({
   onSubmit,
   onError,
 }) => {
-  const [checkoutTime, setCheckoutTime] = useState(cart?.checkout_time || '');
-  const [returnTime, setReturnTime] = useState(cart?.return_by_time || '');
+  const [returnTime, setReturnTime] = useState<string>(() => {
+    const now = new Date();
+    const sixHoursLater = new Date(now.getTime() + (6 * 60 * 60 * 1000));
+    return sixHoursLater.toISOString().slice(0, 16);
+  });
   const [errors, setErrors] = useState<ValidationErrors>({});
 
   useEffect(() => {
-    if (cart) {
-      setCheckoutTime(cart.checkout_time || '');
-      setReturnTime(cart.return_by_time || '');
+    if (open) {
+      const now = new Date();
+      const sixHoursLater = new Date(now.getTime() + (6 * 60 * 60 * 1000));
+      setReturnTime(sixHoursLater.toISOString().slice(0, 16));
+      setErrors({}); // Clear any previous errors
     }
-  }, [cart]);
+  }, [open]);
 
   const validateTimes = (): boolean => {
     const newErrors: ValidationErrors = {};
     let isValid = true;
 
     const now = new Date();
-    const checkout = new Date(checkoutTime);
     const returnBy = new Date(returnTime);
-
-    if (!checkoutTime) {
-      newErrors.checkout_time = 'Checkout time is required';
-      isValid = false;
-    } else if (checkout < now) {
-      newErrors.checkout_time = 'Checkout time cannot be in the past';
-      isValid = false;
-    }
+    const minReturnTime = new Date(now.getTime() + 30 * 60000); // 30 minutes after now
+    const maxReturnTime = new Date(now.getTime() + 24 * 60 * 60000); // 24 hours after now
 
     if (!returnTime) {
       newErrors.return_by_time = 'Return time is required';
       isValid = false;
-    } else if (returnBy <= checkout) {
-      newErrors.return_by_time = 'Return time must be after checkout time';
+    } else if (returnBy <= now) {
+      newErrors.return_by_time = 'Return time must be after current time';
+      isValid = false;
+    } else if (returnBy < minReturnTime) {
+      newErrors.return_by_time = 'Return time must be at least 30 minutes from now';
+      isValid = false;
+    } else if (returnBy > maxReturnTime) {
+      newErrors.return_by_time = 'Return time cannot be more than 24 hours from now';
       isValid = false;
     }
 
     setErrors(newErrors);
     return isValid;
+  };
+
+  const formatLocalDateTime = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  const getCurrentTimeString = () => {
+    const now = new Date();
+    return now.toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
   };
 
   const handleSubmit = async () => {
@@ -124,20 +148,20 @@ const TimeUpdateDialog: React.FC<TimeUpdateDialogProps> = ({
         throw new Error('No cart selected');
       }
 
+      const now = new Date();
+      
       await api.updateCart(cart.id, {
         ...cart,
         status: 'in-use',
-        checkout_time: checkoutTime,
-        return_by_time: returnTime,
+        checkout_time: now.toISOString(),
+        return_by_time: new Date(returnTime).toISOString(),
       });
 
       await onSubmit();
       onClose();
     } catch (error) {
       if (error instanceof RequestError) {
-        if (error.message.includes('checkout_time')) {
-          setErrors({ checkout_time: error.message });
-        } else if (error.message.includes('return_by_time')) {
+        if (error.message.includes('return_by_time')) {
           setErrors({ return_by_time: error.message });
         } else {
           setErrors({ general: error.message });
@@ -149,13 +173,11 @@ const TimeUpdateDialog: React.FC<TimeUpdateDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md">
-      <DialogTitle sx={{ pb: 0 }}>
-        Update Times for Cart #{cart?.cart_number}
-      </DialogTitle>
-      <StyledDialogContent>
+    <Dialog open={open} onClose={onClose}>
+      <DialogTitle>Update Cart Times</DialogTitle>
+      <DialogContent>
         {errors.general && (
-          <Alert severity="error" sx={{ mb: 3 }}>
+          <Alert severity="error" sx={{ mb: 2 }}>
             {errors.general}
           </Alert>
         )}
@@ -169,16 +191,9 @@ const TimeUpdateDialog: React.FC<TimeUpdateDialogProps> = ({
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                 Checkout Time
               </Typography>
-              <TextField
-                fullWidth
-                type="datetime-local"
-                value={checkoutTime}
-                onChange={(e) => setCheckoutTime(e.target.value)}
-                required
-                error={!!errors.checkout_time}
-                helperText={errors.checkout_time}
-                InputLabelProps={{ shrink: true }}
-              />
+              <Typography variant="body1">
+                {getCurrentTimeString()}
+              </Typography>
             </Box>
           </TimeField>
 
@@ -203,21 +218,10 @@ const TimeUpdateDialog: React.FC<TimeUpdateDialogProps> = ({
             </Box>
           </TimeField>
         </StyledPaper>
-      </StyledDialogContent>
-      <DialogActions sx={{ p: 3 }}>
-        <Button 
-          onClick={onClose}
-          variant="outlined"
-          sx={{ borderRadius: 2 }}
-        >
-          Cancel
-        </Button>
-        <Button 
-          onClick={handleSubmit} 
-          variant="contained" 
-          color="primary"
-          sx={{ borderRadius: 2 }}
-        >
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={handleSubmit} variant="contained" color="primary">
           Update Times
         </Button>
       </DialogActions>

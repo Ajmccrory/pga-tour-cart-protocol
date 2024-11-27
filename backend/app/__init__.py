@@ -8,34 +8,21 @@ Description: Flask application factory that initializes the app with all necessa
 
 from flask import Flask
 from flask_cors import CORS
-import pymysql
 from flask_sqlalchemy import SQLAlchemy
 from config import Config
+import pymysql
 
-# Initialize SQLAlchemy before any other database operations
+# Initialize without arguments
 db = SQLAlchemy()
 pymysql.install_as_MySQLdb()
 
 def create_app():
-    """
-    Creates and configures the Flask application.
-    
-    Returns:
-        Flask: The configured Flask application instance
-    """
+    """Creates and configures the Flask application"""
     app = Flask(__name__)
     app.config.from_object(Config)
     
-    # Initialize CORS with security settings
-    CORS(app, resources={
-        r"/*": {
-            "origins": "*",
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type"]
-        }
-    })
-    
-    # Initialize database
+    # Initialize extensions with app
+    CORS(app)
     db.init_app(app)
     
     # Register blueprints

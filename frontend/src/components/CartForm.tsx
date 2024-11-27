@@ -63,17 +63,30 @@ const CartForm: React.FC<CartFormProps> = ({
   onClose,
   onError,
 }) => {
-  const [formData, setFormData] = useState<Partial<Cart>>(
-    cart || {
+  const [formData, setFormData] = useState<Partial<Cart>>(() => {
+    if (cart) {
+      return cart;
+    }
+    
+    return {
       cart_number: '',
       status: 'available' as CartStatus,
       battery_level: 100,
       checkout_time: null,
       return_by_time: null,
-    }
-  );
+    };
+  });
 
   const [errors, setErrors] = useState<ValidationErrors>({});
+
+  const setCartTimes = () => {
+    const now = new Date();
+    const sixHoursLater = new Date(now.getTime() + (6 * 60 * 60 * 1000));
+    return {
+      checkout_time: now.toISOString(),
+      return_by_time: sixHoursLater.toISOString()
+    };
+  };
 
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {};
@@ -99,19 +112,25 @@ const CartForm: React.FC<CartFormProps> = ({
 
     // Time validation for 'in-use' status
     if (formData.status === 'in-use') {
-      if (!formData.checkout_time) {
-        newErrors.checkout_time = 'Checkout time is required for in-use carts';
-        isValid = false;
-      }
+      const now = new Date();
+      const checkout = new Date(formData.checkout_time || now);
+      
       if (!formData.return_by_time) {
         newErrors.return_by_time = 'Return time is required for in-use carts';
         isValid = false;
-      }
-      if (formData.checkout_time && formData.return_by_time) {
-        const checkout = new Date(formData.checkout_time);
+      } else {
         const returnBy = new Date(formData.return_by_time);
+        const minReturnTime = new Date(checkout.getTime() + 30 * 60000); // 30 minutes after checkout
+        const maxReturnTime = new Date(checkout.getTime() + 24 * 60 * 60000); // 24 hours after checkout
+
         if (returnBy <= checkout) {
           newErrors.return_by_time = 'Return time must be after checkout time';
+          isValid = false;
+        } else if (returnBy < minReturnTime) {
+          newErrors.return_by_time = 'Return time must be at least 30 minutes after checkout';
+          isValid = false;
+        } else if (returnBy > maxReturnTime) {
+          newErrors.return_by_time = 'Return time cannot be more than 24 hours after checkout';
           isValid = false;
         }
       }
@@ -122,12 +141,12 @@ const CartForm: React.FC<CartFormProps> = ({
   };
 
   const handleStatusChange = (newStatus: CartStatus) => {
+    const times = newStatus === 'in-use' ? setCartTimes() : { checkout_time: null, return_by_time: null };
+    
     setFormData({
       ...formData,
       status: newStatus,
-      // Reset times if not in-use
-      checkout_time: newStatus === 'in-use' ? formData.checkout_time : null,
-      return_by_time: newStatus === 'in-use' ? formData.return_by_time : null,
+      ...times
     });
   };
 
@@ -140,10 +159,19 @@ const CartForm: React.FC<CartFormProps> = ({
     }
 
     try {
+      const submissionData = { ...formData };
+      
+      // If status is in-use, set times right before submission
+      if (submissionData.status === 'in-use') {
+        const times = setCartTimes();
+        submissionData.checkout_time = times.checkout_time;
+        submissionData.return_by_time = times.return_by_time;
+      }
+
       if (cart) {
-        await api.updateCart(cart.id, formData);
+        await api.updateCart(cart.id, submissionData);
       } else {
-        await api.createCart(formData);
+        await api.createCart(submissionData);
       }
       onSubmit();
       onClose();
@@ -256,13 +284,7 @@ const CartForm: React.FC<CartFormProps> = ({
                 type="datetime-local"
                 label="Checkout Time"
                 value={formData.checkout_time || ''}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  checkout_time: e.target.value
-                })}
-                required
-                error={!!errors.checkout_time}
-                helperText={errors.checkout_time}
+                disabled
                 InputLabelProps={{ shrink: true }}
                 sx={{ mb: 2 }}
               />
@@ -272,14 +294,9 @@ const CartForm: React.FC<CartFormProps> = ({
                 type="datetime-local"
                 label="Return By"
                 value={formData.return_by_time || ''}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  return_by_time: e.target.value
-                })}
-                required
-                error={!!errors.return_by_time}
-                helperText={errors.return_by_time}
+                disabled
                 InputLabelProps={{ shrink: true }}
+                helperText="Return time is automatically set to 6 hours after checkout"
               />
             </FormSection>
           )}

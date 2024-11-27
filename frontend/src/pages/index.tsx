@@ -5,11 +5,27 @@
  * @description Entry point for the application
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import AdminScreen from './AdminScreen';
+import ErrorSnackbar from '../components/ErrorSnackbar';
 
 const IndexPage: React.FC = () => {
-  return <AdminScreen />;
+  const [error, setError] = useState<string | null>(null);
+
+  const handleError = (message: string) => {
+    setError(message);
+  };
+
+  return (
+    <>
+      <AdminScreen onError={handleError} />
+      <ErrorSnackbar
+        open={!!error}
+        message={error || ''}
+        onClose={() => setError(null)}
+      />
+    </>
+  );
 };
 
 export default IndexPage;

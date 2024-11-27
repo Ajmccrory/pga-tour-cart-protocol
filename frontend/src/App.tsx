@@ -6,22 +6,22 @@
  */
 
 import React, { useState } from 'react';
-import { redTheme, blackTheme } from './styles/theme';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { lightTheme, darkTheme } from './styles/theme';
 import AdminScreen from './pages/AdminScreen';
 import Layout from './components/Layout';
 import ErrorSnackbar from './components/ErrorSnackbar';
 
-interface ErrorHandlingProps {
+interface AdminScreenProps {
   onError: (message: string) => void;
 }
 
 const App: React.FC = () => {
-  const [theme, setTheme] = useState(redTheme);
-  const [error, setError] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const toggleTheme = () => {
-    setTheme(theme === redTheme ? blackTheme : redTheme);
     setIsDarkMode(!isDarkMode);
   };
 
@@ -29,20 +29,25 @@ const App: React.FC = () => {
     setError(null);
   };
 
+  const handleError = (message: string) => {
+    setError(message);
+  };
+
   return (
-    <Layout
-      error={error}
-      onErrorClear={handleErrorClear}
-      isDarkMode={isDarkMode}
-      onThemeToggle={toggleTheme}
-    >
-      <AdminScreen />
-      <ErrorSnackbar
-        open={!!error}
-        message={error || ''}
-        onClose={handleErrorClear}
-      />
-    </Layout>
+    <ThemeProvider theme={isDarkMode ? darkTheme : lightTheme}>
+      <CssBaseline />
+      <Layout
+        isDarkMode={isDarkMode}
+        onThemeToggle={toggleTheme}
+      >
+        <AdminScreen onError={handleError} />
+        <ErrorSnackbar
+          open={!!error}
+          message={error || ''}
+          onClose={handleErrorClear}
+        />
+      </Layout>
+    </ThemeProvider>
   );
 };
 

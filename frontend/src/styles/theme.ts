@@ -9,15 +9,14 @@ import { createTheme, Theme, ThemeOptions } from '@mui/material/styles';
 
 // Extend the Theme and ThemeOptions interfaces
 declare module '@mui/material/styles' {
-  interface Theme {
+  interface Palette {
     cartStatus: {
       available: string;
       inUse: string;
       maintenance: string;
     };
   }
-  
-  interface ThemeOptions {
+  interface PaletteOptions {
     cartStatus?: {
       available: string;
       inUse: string;
@@ -26,14 +25,7 @@ declare module '@mui/material/styles' {
   }
 }
 
-// Define status colors
-const statusColors = {
-  available: '#4caf50',
-  inUse: '#2196f3',
-  maintenance: '#f44336',
-};
-
-// Base theme configuration
+// Base theme options that are shared between light and dark modes
 const baseThemeOptions: ThemeOptions = {
   shape: {
     borderRadius: 12,
@@ -75,15 +67,10 @@ const baseThemeOptions: ThemeOptions = {
       },
     },
   },
-  cartStatus: {
-    available: statusColors.available,
-    inUse: statusColors.inUse,
-    maintenance: statusColors.maintenance,
-  },
 };
 
-// Light theme (red)
-export const redTheme = createTheme({
+// Light theme
+export const lightTheme = createTheme({
   ...baseThemeOptions,
   palette: {
     mode: 'light',
@@ -101,40 +88,50 @@ export const redTheme = createTheme({
       default: '#f5f5f5',
       paper: '#ffffff',
     },
+    cartStatus: {
+      available: '#4caf50',
+      inUse: '#2196f3',
+      maintenance: '#f44336',
+    },
   },
 });
 
-// Dark theme (black)
-export const blackTheme = createTheme({
+// Dark theme
+export const darkTheme = createTheme({
   ...baseThemeOptions,
   palette: {
     mode: 'dark',
     primary: {
-      main: '#424242',
-      light: '#616161',
-      dark: '#212121',
+      main: '#ef5350',
+      light: '#ff867c',
+      dark: '#b61827',
     },
     secondary: {
-      main: '#757575',
-      light: '#9e9e9e',
-      dark: '#424242',
+      main: '#f44336',
+      light: '#ff7961',
+      dark: '#ba000d',
     },
     background: {
       default: '#121212',
       paper: '#1e1e1e',
     },
+    cartStatus: {
+      available: '#81c784',
+      inUse: '#64b5f6',
+      maintenance: '#e57373',
+    },
   },
 });
 
 // Helper function to get status color
-export const getStatusColor = (status: string, theme: Theme = redTheme): string => {
+export const getStatusColor = (status: string, theme: Theme): string => {
   switch (status) {
     case 'available':
-      return theme.cartStatus.available;
+      return theme.palette.cartStatus.available;
     case 'in-use':
-      return theme.cartStatus.inUse;
+      return theme.palette.cartStatus.inUse;
     case 'maintenance':
-      return theme.cartStatus.maintenance;
+      return theme.palette.cartStatus.maintenance;
     default:
       return theme.palette.grey[500];
   }

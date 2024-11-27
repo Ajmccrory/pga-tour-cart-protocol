@@ -11,17 +11,13 @@ import {
   AppBar,
   Toolbar,
   Typography,
-  ThemeProvider,
-  CssBaseline,
   IconButton,
-  Snackbar,
-  Alert,
-  styled,
   useTheme,
+  styled,
 } from '@mui/material';
 import { 
-  Brightness4, 
-  Brightness7, 
+  Brightness4 as DarkIcon, 
+  Brightness7 as LightIcon,
   DirectionsCar as CarIcon 
 } from '@mui/icons-material';
 
@@ -49,16 +45,12 @@ const MainContent = styled(Box)(({ theme }) => ({
 
 interface LayoutProps {
   children: React.ReactNode;
-  error?: string | null;
-  onErrorClear: () => void;
   isDarkMode: boolean;
   onThemeToggle: () => void;
 }
 
 const Layout: React.FC<LayoutProps> = ({
   children,
-  error,
-  onErrorClear,
   isDarkMode,
   onThemeToggle,
 }) => {
@@ -85,7 +77,7 @@ const Layout: React.FC<LayoutProps> = ({
               },
             }}
           >
-            {isDarkMode ? <Brightness7 /> : <Brightness4 />}
+            {isDarkMode ? <LightIcon /> : <DarkIcon />}
           </IconButton>
         </Toolbar>
       </StyledAppBar>
@@ -95,25 +87,6 @@ const Layout: React.FC<LayoutProps> = ({
           {children}
         </Box>
       </MainContent>
-
-      <Snackbar 
-        open={!!error} 
-        autoHideDuration={6000} 
-        onClose={onErrorClear}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert 
-          onClose={onErrorClear} 
-          severity="error" 
-          variant="filled"
-          sx={{ 
-            width: '100%',
-            boxShadow: theme.shadows[3],
-          }}
-        >
-          {error}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };
