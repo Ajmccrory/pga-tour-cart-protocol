@@ -9,10 +9,16 @@ Description: API endpoints for cart management
 from flask import Blueprint, jsonify, request
 from app.models.cart import Cart
 from app import db
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.utils.error_handlers import APIError
+import pytz
 
 bp = Blueprint('carts', __name__)
+
+def get_eastern_time():
+    """Get current time in Eastern timezone"""
+    eastern = pytz.timezone('America/New_York')
+    return datetime.now(eastern)
 
 @bp.route('/carts', methods=['GET'])
 def get_carts():
@@ -48,8 +54,8 @@ def create_cart():
             cart_number=data['cart_number'],
             battery_level=data.get('battery_level', 100),
             status=data.get('status', 'available'),
-            checkout_time=data.get('checkout_time'),
-            return_by_time=data.get('return_by_time')
+            checkout_time=Cart.parse_datetime(data.get('checkout_time')),
+            return_by_time=Cart.parse_datetime(data.get('return_by_time'))
         )
         db.session.add(cart)
         db.session.commit()
@@ -75,7 +81,17 @@ def update_cart(id):
             cart.status = data['status']
             
             if data['status'] == 'in-use':
-                cart.checkout_time = datetime.now()
+                # Use Eastern Time
+                current_time = get_eastern_time()
+                cart.checkout_time = current_time
+                # If no return time is set, automatically set it to 6 hours later
+                if not data.get('return_by_time'):
+                    cart.return_by_time = current_time + timedelta(hours=6)
+                else:
+                    try:
+                        cart.return_by_time = datetime.fromisoformat(data['return_by_time'].replace('Z', '+00:00'))
+                    except ValueError:
+                        raise APIError('Invalid return time format', 400)
             elif data['status'] == 'available':
                 cart.checkout_time = None
                 cart.return_by_time = None

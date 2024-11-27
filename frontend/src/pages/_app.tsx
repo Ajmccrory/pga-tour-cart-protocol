@@ -1,36 +1,28 @@
+/**
+ * Cart Management System - Next.js App Component
+ * @author AJ McCrory
+ * @created 2024
+ * @description Root Next.js application component with global providers
+ */
+
+import type { AppProps } from 'next/app';
 import { useState } from 'react';
-import "@/styles/globals.css";
-import type { AppProps } from "next/app";
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import Layout from '../components/Layout';
-import { redTheme, blackTheme } from '../styles/theme';
-import ErrorSnackbar from '../components/ErrorSnackbar'
+import { lightTheme, darkTheme } from '../styles/theme';
 
 export default function App({ Component, pageProps }: AppProps) {
-  const [theme, setTheme] = useState(redTheme);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleThemeToggle = () => {
-    setTheme(current => current === redTheme ? blackTheme : redTheme);
+    setIsDarkMode(prev => !prev);
   };
 
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={isDarkMode ? darkTheme : lightTheme}>
       <CssBaseline />
-      <Layout 
-        error={error}
-        onErrorClear={() => setError(null)}
-        isDarkMode={theme === blackTheme}
-        onThemeToggle={handleThemeToggle}
-      >
-        <Component {...pageProps} />
-      </Layout>
-      <ErrorSnackbar
-        open={!!error}
-        message={error || ''}
-        onClose={() => setError(null)}
-      />
+      <Component {...pageProps} />
     </ThemeProvider>
   );
 }

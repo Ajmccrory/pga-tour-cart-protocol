@@ -25,19 +25,11 @@ import { api } from '../utils/api';
 import { displayErrorMessage } from '../utils/errorHandling';
 import { Add as AddIcon } from '@mui/icons-material';
 
-const StyledPaper = styled(Paper)(({ theme }) => ({
-    padding: theme.spacing(3),
-    borderRadius: theme.spacing(2),
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-}));
+interface AdminScreenProps {
+  onError: (message: string) => void;
+}
 
-const ActionButton = styled(Button)(({ theme }) => ({
-    borderRadius: theme.spacing(2),
-    padding: theme.spacing(1, 3),
-    marginBottom: theme.spacing(2),
-}));
-
-const AdminScreen: React.FC = () => {
+const AdminScreen: React.FC<AdminScreenProps> = ({ onError }) => {
     const [carts, setCarts] = useState<Cart[]>([]);
     const [persons, setPersons] = useState<Person[]>([]);
     const [openCartDialog, setOpenCartDialog] = useState(false);
@@ -58,6 +50,7 @@ const AdminScreen: React.FC = () => {
         } catch (error) {
             const errorMessage = displayErrorMessage(error);
             setDashboardError(errorMessage);
+            onError(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -66,10 +59,6 @@ const AdminScreen: React.FC = () => {
     useEffect(() => {
         fetchData();
     }, []);
-
-    const handleError = (message: string) => {
-        setDashboardError(message);
-    };
 
     return (
         <Box sx={{ p: 3 }}>
@@ -80,48 +69,48 @@ const AdminScreen: React.FC = () => {
                         loading={loading}
                         error={dashboardError}
                         onUpdate={fetchData}
-                        onError={handleError}
+                        onError={onError}
                     />
                 </Grid>
                 
                 <Grid item xs={12} md={6}>
-                    <StyledPaper>
+                    <Paper sx={{ p: 2 }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                             <Typography variant="h6">Carts</Typography>
-                            <ActionButton 
+                            <Button 
                                 variant="contained" 
                                 onClick={() => setOpenCartDialog(true)}
                                 startIcon={<AddIcon />}
                             >
                                 Add Cart
-                            </ActionButton>
+                            </Button>
                         </Box>
                         <CartList 
                             carts={carts} 
                             onUpdate={fetchData}
-                            onError={handleError}
+                            onError={onError}
                         />
-                    </StyledPaper>
+                    </Paper>
                 </Grid>
 
                 <Grid item xs={12} md={6}>
-                    <StyledPaper>
+                    <Paper sx={{ p: 2 }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                             <Typography variant="h6">Staff</Typography>
-                            <ActionButton 
+                            <Button 
                                 variant="contained" 
                                 onClick={() => setOpenPersonDialog(true)}
                                 startIcon={<AddIcon />}
                             >
                                 Add Staff
-                            </ActionButton>
+                            </Button>
                         </Box>
                         <PersonList 
                             persons={persons} 
                             onUpdate={fetchData}
-                            onError={handleError}
+                            onError={onError}
                         />
-                    </StyledPaper>
+                    </Paper>
                 </Grid>
             </Grid>
 
@@ -129,7 +118,7 @@ const AdminScreen: React.FC = () => {
                 <CartForm 
                     onSubmit={fetchData} 
                     onClose={() => setOpenCartDialog(false)}
-                    onError={handleError}
+                    onError={onError}
                 />
             </Dialog>
 
@@ -137,7 +126,7 @@ const AdminScreen: React.FC = () => {
                 <PersonForm 
                     onSubmit={fetchData} 
                     onClose={() => setOpenPersonDialog(false)}
-                    onError={handleError}
+                    onError={onError}
                 />
             </Dialog>
         </Box>
