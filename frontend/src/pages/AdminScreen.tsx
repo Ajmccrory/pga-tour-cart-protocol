@@ -22,7 +22,9 @@ import PersonForm from '../components/PersonForm';
 import Dashboard from '../components/Dashboard';
 import { api } from '../utils/api';
 import { displayErrorMessage } from '../utils/errorHandling';
-import { Add } from '@mui/icons-material';
+import { Add, DeleteSweep } from '@mui/icons-material';
+import BulkCartForm from '../components/BulkCartForm';
+import CartSelectionDialog from '../components/CartSelectionDialog';
 
 interface AdminScreenProps {
   onError: (message: string) => void;
@@ -34,6 +36,7 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onError }) => {
     const [openCartDialog, setOpenCartDialog] = useState(false);
     const [openBulkCartDialog, setOpenBulkCartDialog] = useState(false);
     const [openPersonDialog, setOpenPersonDialog] = useState(false);
+    const [openBulkDeleteDialog, setOpenBulkDeleteDialog] = useState(false);
     const [loading, setLoading] = useState(true);
     const [dashboardError, setDashboardError] = useState<string | null>(null);
 
@@ -92,6 +95,16 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onError }) => {
                                 >
                                     Add Cart
                                 </Button>
+                                {carts.length > 0 && (
+                                    <Button
+                                        variant="outlined"
+                                        color="error"
+                                        onClick={() => setOpenBulkDeleteDialog(true)}
+                                        startIcon={<DeleteSweep />}
+                                    >
+                                        Bulk Delete
+                                    </Button>
+                                )}
                             </Box>
                         </Box>
                         <Box sx={{ overflowY: 'auto', maxHeight: 'calc(100vh - 300px)' }}>
@@ -142,6 +155,26 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onError }) => {
                     onError={onError}
                 />
             </Dialog>
+
+            <Dialog 
+                open={openBulkCartDialog} 
+                onClose={() => setOpenBulkCartDialog(false)}
+                maxWidth="md"
+            >
+                <BulkCartForm
+                    onSubmit={fetchData}
+                    onClose={() => setOpenBulkCartDialog(false)}
+                    onError={onError}
+                />
+            </Dialog>
+
+            <CartSelectionDialog
+                open={openBulkDeleteDialog}
+                carts={carts}
+                onClose={() => setOpenBulkDeleteDialog(false)}
+                onSubmit={fetchData}
+                onError={onError}
+            />
         </Box>
     );
 };

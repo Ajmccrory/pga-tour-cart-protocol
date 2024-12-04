@@ -61,6 +61,14 @@ The application is functional with:
 ## Next Steps
 Potential improvements include:
 - Staff scheduling
+- Gas gauge option for courses with gas carts
+- Bulk cart delete
+- Debug cart name editing
+- sort/filter options for cart list dashboard.
+- Admin screen
+- cart return message is not flushing cache of already sent messages
+- cart to staff relation needs to be many to many
+- User Auth
 - Analytics dashboard
 - Export functionality
 - Mobile app version

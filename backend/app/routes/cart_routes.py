@@ -13,6 +13,7 @@ from app import db
 from datetime import datetime, timedelta
 from app.utils.error_handlers import APIError
 import pytz
+from flask_cors import cross_origin
 
 bp = Blueprint('carts', __name__)
 
@@ -114,45 +115,39 @@ def delete_cart(id):
 
 @bp.route('/carts/bulk', methods=['POST'])
 def create_bulk_carts():
-    """
-    Create multiple carts at once
-    Returns:
-        JSON array of created cart objects
-    Raises:
-        APIError: If creation fails or validation error occurs
-    """
+    """Create multiple carts at once"""
     try:
         data = request.get_json()
-        if not data or not isinstance(data, list):
-            raise APIError('Invalid data format. Expected array of carts.', 400)
-        
         if not data:
-            raise APIError('No cart data provided', 400)
-        
-        # Check for duplicate cart numbers in the request
-        cart_numbers = [cart.get('cart_number') for cart in data]
-        if len(cart_numbers) != len(set(cart_numbers)):
-            raise APIError('Duplicate cart numbers in request', 400)
-        
-        # Check for existing cart numbers
-        existing_carts = Cart.query.filter(Cart.cart_number.in_(cart_numbers)).all()
-        if existing_carts:
-            existing_numbers = [cart.cart_number for cart in existing_carts]
-            raise APIError(f"Cart numbers already exist: {', '.join(existing_numbers)}", 409)
-        
+            raise APIError('No data provided', 400)
+
+        required_fields = ['prefix', 'startNumber', 'count', 'status', 'battery_level']
+        for field in required_fields:
+            if field not in data:
+                raise APIError(f'Missing required field: {field}', 400)
+
+        if data['count'] < 1 or data['count'] > 50:
+            raise APIError('Count must be between 1 and 50', 400)
+
         created_carts = []
-        for cart_data in data:
+        for i in range(data['count']):
+            cart_number = f"{data['prefix']}-{str(data['startNumber'] + i).zfill(3)}"
+            
+            # Check if cart number already exists
+            if Cart.query.filter_by(cart_number=cart_number).first():
+                raise APIError(f'Cart number {cart_number} already exists', 400)
+            
             cart = Cart(
-                cart_number=cart_data['cart_number'],
-                battery_level=cart_data.get('battery_level', 100),
-                status=cart_data.get('status', 'available')
+                cart_number=cart_number,
+                status=data['status'],
+                battery_level=data['battery_level']
             )
             db.session.add(cart)
             created_carts.append(cart)
-        
+
         db.session.commit()
         return jsonify([cart.to_dict() for cart in created_carts]), 201
-    
+
     except APIError:
         db.session.rollback()
         raise
@@ -182,9 +177,13 @@ def delete_all_carts():
         db.session.rollback()
         raise APIError(f'Failed to delete carts: {str(e)}', 500)
 
-@bp.route('/carts/<int:cart_id>/assign/<int:person_id>', methods=['POST'])
+@bp.route('/carts/<int:cart_id>/assign/<int:person_id>', methods=['POST', 'OPTIONS'])
+@cross_origin()
 def assign_person_to_cart(cart_id, person_id):
     """Assign a person to a cart"""
+    if request.method == 'OPTIONS':
+        return '', 204
+        
     try:
         cart = Cart.query.get_or_404(cart_id)
         person = Person.query.get_or_404(person_id)
@@ -200,6 +199,16 @@ def assign_person_to_cart(cart_id, person_id):
         if cart.status != 'in-use':
             cart.status = 'in-use'
             cart.set_checkout_time()
+
+        # Create history entry
+        history_entry = CartHistory(
+            cart_id=cart.id,
+            person_id=person.id,
+            checkout_time=cart.checkout_time,
+            expected_return_time=cart.return_by_time,
+            battery_level_start=cart.battery_level
+        )
+        db.session.add(history_entry)
 
         db.session.commit()
         return jsonify(cart.to_dict())
@@ -288,4 +297,40 @@ def return_cart(cart_id):
         raise
     except Exception as e:
         db.session.rollback()
-        raise APIError(f'Failed to process cart return: {str(e)}', 500) 
+        raise APIError(f'Failed to process cart return: {str(e)}', 500)
+
+@bp.route('/carts/bulk-delete', methods=['POST', 'OPTIONS'])
+@cross_origin()
+def delete_selected_carts():
+    """Delete multiple selected carts"""
+    if request.method == 'OPTIONS':
+        return '', 204
+        
+    try:
+        data = request.get_json()
+        if not data or 'cart_ids' not in data:
+            raise APIError('No cart IDs provided', 400)
+        
+        cart_ids = data['cart_ids']
+        if not isinstance(cart_ids, list):
+            raise APIError('Cart IDs must be provided as a list', 400)
+        
+        # Delete history entries for selected carts
+        CartHistory.query.filter(CartHistory.cart_id.in_(cart_ids)).delete(synchronize_session=False)
+        
+        # Delete assignments for selected carts
+        db.session.execute(
+            cart_assignments.delete().where(
+                cart_assignments.c.cart_id.in_(cart_ids)
+            )
+        )
+        
+        # Delete the selected carts
+        Cart.query.filter(Cart.id.in_(cart_ids)).delete(synchronize_session=False)
+        
+        db.session.commit()
+        return '', 204
+    except Exception as e:
+        db.session.rollback()
+        raise APIError(f'Failed to delete selected carts: {str(e)}', 500)
+  

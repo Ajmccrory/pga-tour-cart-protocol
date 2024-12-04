@@ -91,13 +91,14 @@ const BulkCartForm: React.FC<BulkCartFormProps> = ({
     }
 
     try {
-      const carts = Array.from({ length: formData.count }, (_, index) => ({
-        cart_number: `${formData.prefix}-${(formData.startNumber + index).toString().padStart(3, '0')}`,
+      await api.createBulkCarts({
+        prefix: formData.prefix,
+        startNumber: formData.startNumber,
+        count: formData.count,
         status: formData.status,
-        battery_level: formData.battery_level,
-      }));
-
-      await api.createBulkCarts(carts);
+        battery_level: formData.battery_level
+      });
+      
       onSubmit();
       onClose();
     } catch (error) {

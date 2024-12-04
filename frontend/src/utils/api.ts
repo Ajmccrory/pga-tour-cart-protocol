@@ -7,6 +7,7 @@
 
 import { Cart, Person } from '../types/types';
 import { RequestError, handleApiError } from './errorHandling';
+import { CartStatus } from '../types/cartStatus';
 
 // Add CartHistory interface
 export interface CartHistory {
@@ -188,13 +189,18 @@ export const api = {
     }
   },
 
-  async createBulkCarts(carts: Partial<Cart>[]): Promise<Cart[]> {
+  async createBulkCarts(data: {
+    prefix: string;
+    startNumber: number;
+    count: number;
+    status: CartStatus;
+    battery_level: number;
+  }): Promise<Cart[]> {
     try {
       const response = await fetch(`${API_BASE_URL}/carts/bulk`, {
         method: 'POST',
         headers: defaultHeaders,
-        credentials: 'include',
-        body: JSON.stringify(carts),
+        body: JSON.stringify(data),
       });
       await handleApiError(response);
       return response.json();
@@ -354,6 +360,19 @@ export const api = {
       });
       await handleApiError(response);
       return response.json();
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async deleteSelectedCarts(cartIds: number[]): Promise<void> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/carts/bulk-delete`, {
+        method: 'POST',
+        headers: defaultHeaders,
+        body: JSON.stringify({ cart_ids: cartIds }),
+      });
+      await handleApiError(response);
     } catch (error) {
       throw error;
     }
