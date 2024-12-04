@@ -64,22 +64,26 @@ const PersonList: React.FC<PersonListProps> = ({ persons, onUpdate, onError }) =
               primary={person.name}
               secondary={
                 <Box component="div">
-                  <Typography variant="body2" component="div">
-                    Role: {ROLE_LABELS[person.role]}<br />
-                    Email: {person.email}<br />
+                  <Typography component="div" variant="body2">
+                    Role: {ROLE_LABELS[person.role]}
+                  </Typography>
+                  <Typography component="div" variant="body2">
+                    Email: {person.email}
+                  </Typography>
+                  <Typography component="div" variant="body2">
                     Phone: {person.phone}
                   </Typography>
                   {person.assigned_carts.length > 0 && (
                     <Box component="div" sx={{ mt: 2 }}>
-                      <Typography variant="subtitle2" color="primary" component="div">
+                      <Typography component="div" variant="subtitle2" color="primary">
                         Assigned Carts:
                       </Typography>
                       {person.assigned_carts.map((cart) => (
                         <Typography 
                           key={cart.id} 
+                          component="div"
                           variant="body2" 
                           color="text.secondary"
-                          component="div"
                         >
                           Cart #{cart.cart_number}
                         </Typography>
